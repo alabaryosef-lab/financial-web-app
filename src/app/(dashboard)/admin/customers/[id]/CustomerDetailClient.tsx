@@ -264,20 +264,20 @@ export function CustomerDetailClient() {
         </Card>
 
         <Card variant="elevated" padding="large">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-info-light rounded-xl">
                 <UserCheck className="w-6 h-6 text-info" />
               </div>
               <h2 className="text-xl font-semibold text-neutral-900">{t('detail.assignedEmployee')}</h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               {assignedEmployee ? (
                 <Button
                   variant="outline"
                   size="small"
                   onClick={handleRemoveEmployee}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap w-full sm:w-auto"
                 >
                   <X className="w-4 h-4 me-2" />
                   {t('page.removeEmployee')}
@@ -287,7 +287,7 @@ export function CustomerDetailClient() {
                 variant="primary"
                 size="small"
                 onClick={() => setIsAssignModalOpen(true)}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap w-full sm:w-auto"
               >
                 <UserPlus className="w-4 h-4 me-2" />
                 {assignedEmployee ? t('page.changeEmployee') : t('page.assignEmployee')}
