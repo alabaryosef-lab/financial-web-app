@@ -452,7 +452,7 @@ export default function AdminChatPage() {
             <ChatWindow
               messages={messages}
               onSendMessage={handleSendMessage}
-              chatId={selectedChat}
+              chatId={selectedChat ?? undefined}
               onMessageUpdate={(update) => {
                 if (!update || !selectedChat) return;
                 if (update.type === 'messageEdited') {

@@ -18,8 +18,8 @@ async function seed() {
   try {
     // --- Admin ---
     const adminId = 'admin-1';
-    const adminEmail = 'admin@demo.com';
-    const adminPassword = 'admin123';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@khalijtamweel.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin@Khalijtamweel123';
     const [existingAdmin] = await connection.query('SELECT id FROM users WHERE email = ?', [adminEmail]) as any[];
     if (existingAdmin.length === 0) {
       const passwordHash = await hashPassword(adminPassword);
@@ -27,7 +27,7 @@ async function seed() {
         `INSERT INTO users (id, email, password_hash, role, is_active) VALUES (?, ?, ?, 'admin', TRUE)`,
         [adminId, adminEmail, passwordHash]
       );
-      await saveUserNameTranslations(adminId, 'Admin User', 'مستخدم المسؤول');
+      await saveUserNameTranslations(adminId, 'Khalijtamweel', 'خليج تمويل');
       console.log('Admin created:', adminEmail, '/', adminPassword);
     } else {
       console.log('Admin already exists:', adminEmail);

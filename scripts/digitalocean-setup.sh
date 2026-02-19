@@ -7,7 +7,8 @@
 # Optional env vars (set before running):
 #   GITHUB_REPO, BRANCH, APP_DIR, APP_USER, NODE_VERSION, PORT
 #   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
-#   JWT_SECRET, INSTALL_MYSQL=y, SEED_ADMIN=y
+#   JWT_SECRET, INSTALL_MYSQL=y
+#   ADMIN_EMAIL (default admin@khalijtamweel.com), ADMIN_PASSWORD (default admin@Khalijtamweel123)
 #   ENV_FILE=/path/to/your/.env.local  (copy this file to droplet and use instead of generated template)
 
 set -e
@@ -29,7 +30,8 @@ DB_HOST="${DB_HOST:-localhost}"
 
 JWT_SECRET="${JWT_SECRET:-change-me-in-production}"
 INSTALL_MYSQL="${INSTALL_MYSQL:-n}"
-SEED_ADMIN="${SEED_ADMIN:-n}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@khalijtamweel.com}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin@Khalijtamweel123}"
 
 # --- Ensure root ---
 if [ "$(id -u)" -ne 0 ]; then
@@ -119,21 +121,44 @@ fi
 chown "$APP_USER:$APP_USER" "$APP_DIR/.env.local"
 chmod 600 "$APP_DIR/.env.local"
 
+echo "=== Add swap space (for low-memory droplets) ==="
+if [ ! -f /swapfile ]; then
+  fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
 echo "=== Install app deps, migrate, build ==="
-sudo -u "$APP_USER" bash -c "cd $APP_DIR && npm ci"
+# Stop MySQL temporarily to free memory during npm install
+systemctl stop mysql 2>/dev/null || true
+sudo -u "$APP_USER" bash -c "cd $APP_DIR && npm install --no-audit --no-fund --prefer-offline || npm ci --no-audit --no-fund"
+systemctl start mysql 2>/dev/null || true
 sudo -u "$APP_USER" bash -c "cd $APP_DIR && npm run migrate"
-[ "$SEED_ADMIN" = "y" ] && sudo -u "$APP_USER" bash -c "cd $APP_DIR && npm run seed-admin" || true
+
+echo "=== Create admin user ($ADMIN_EMAIL) in database ==="
+sudo -u "$APP_USER" bash -c "cd $APP_DIR && ADMIN_EMAIL='$ADMIN_EMAIL' ADMIN_PASSWORD='$ADMIN_PASSWORD' node scripts/create-admin-do.js"
+
+echo "=== Build app ==="
+# Stop MySQL during build to free memory
+systemctl stop mysql 2>/dev/null || true
 sudo -u "$APP_USER" bash -c "cd $APP_DIR && npm run build"
+systemctl start mysql 2>/dev/null || true
 
 echo "=== Install PM2 and start app ==="
 npm install -g pm2
-cd "$APP_DIR" && PORT=$PORT pm2 start npm --name financial-web-app -- start
+NPM_PREFIX=$(npm config get prefix 2>/dev/null || echo "/usr/local")
+export PATH="$NPM_PREFIX/bin:/usr/local/bin:/usr/bin:$PATH"
+PM2_BIN=$(command -v pm2 || echo "$NPM_PREFIX/bin/pm2")
+cd "$APP_DIR" && chmod +x scripts/start-server.sh && PORT=$PORT NODE_ENV=production $PM2_BIN start ecosystem.config.js
 cd - >/dev/null
-pm2 save
-pm2 startup systemd -u root --hp /root 2>/dev/null || true
+$PM2_BIN save
+$PM2_BIN startup systemd -u root --hp /root 2>/dev/null || true
 
 echo "=== Setup complete ==="
 echo "App dir: $APP_DIR"
+echo "Admin login: $ADMIN_EMAIL / $ADMIN_PASSWORD (change password after first login)"
 echo "Env file: $APP_DIR/.env.local (edit DB, JWT, Firebase, SendGrid as needed)"
-echo "Port: $PORT (ensure firewall allows it; UFW rules applied)"
+echo "Port: $PORT (UFW allows 22,80,443,$PORT)"
 echo "Commands: pm2 status | pm2 logs financial-web-app | pm2 restart financial-web-app"

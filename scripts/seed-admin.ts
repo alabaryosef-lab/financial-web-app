@@ -10,10 +10,10 @@ async function seedAdmin() {
 
   try {
     const adminId = 'admin-1';
-    const email = 'admin@demo.com';
-    const password = 'admin123';
-    const nameEn = 'Admin User';
-    const nameAr = 'مستخدم المسؤول';
+    const email = process.env.ADMIN_EMAIL || 'admin@khalijtamweel.com';
+    const password = process.env.ADMIN_PASSWORD || 'admin@Khalijtamweel123';
+    const nameEn = 'Khalijtamweel';
+    const nameAr = 'خليج تمويل';
 
     // Check if admin already exists
     const [existing] = await pool.query(

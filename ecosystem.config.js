@@ -1,9 +1,13 @@
+const path = require('path');
+const appDir = path.resolve(__dirname);
+
 module.exports = {
   apps: [
     {
       name: 'financial-web-app',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start -p ${PORT:-3000}',
+      script: path.join(appDir, 'scripts/start-server.sh'),
+      interpreter: 'bash',
+      cwd: appDir,
       instances: 1,
       exec_mode: 'fork',
       env: {
