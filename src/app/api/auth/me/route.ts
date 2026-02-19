@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { successResponse, errorResponse, unauthorizedError, notFoundError, serverError } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Get user ID from query or header (for now, using query - in production use JWT/session)

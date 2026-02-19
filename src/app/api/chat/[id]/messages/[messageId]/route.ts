@@ -4,6 +4,8 @@ import { successResponse, errorResponse, serverError, unauthorizedError, validat
 import { saveChatMessageTranslations } from '@/lib/translations';
 import { translateToBothLanguages } from '@/lib/translate';
 
+export const dynamic = 'force-dynamic';
+
 const EDIT_WINDOW_SECONDS = 600; // 10 minutes
 
 /**

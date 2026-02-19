@@ -5,6 +5,8 @@ import { translateToBothLanguages } from '@/lib/translate';
 import { successResponse, errorResponse, validationError, notFoundError, serverError } from '@/lib/api';
 import { createNotificationAndPush } from '@/lib/notify';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

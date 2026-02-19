@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { successResponse, errorResponse, serverError } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 /** Get user role from DB */
 async function getUserRole(userId: string): Promise<'admin' | 'employee' | 'customer' | null> {
   const [rows] = await pool.query(

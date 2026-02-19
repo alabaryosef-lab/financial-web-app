@@ -4,6 +4,8 @@ import { saveLoanNotesTranslations } from '@/lib/translations';
 import { translateToBothLanguages } from '@/lib/translate';
 import { successResponse, errorResponse, notFoundError, serverError } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

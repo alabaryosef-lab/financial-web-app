@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { successResponse, errorResponse, serverError, unauthorizedError } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * DELETE /api/chat/[id]
  * Delete a chat room (admin only, creator only)

@@ -8,6 +8,8 @@ import {
 import { sendPushNotification } from '@/lib/fcm';
 import { translateToBothLanguages } from '@/lib/translate';
 
+export const dynamic = 'force-dynamic';
+
 type TargetType = 'all' | 'all_employees' | 'all_customers' | 'selected';
 
 /**

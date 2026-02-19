@@ -5,6 +5,8 @@ import { saveChatMessageTranslations } from '@/lib/translations';
 import { translateToBothLanguages } from '@/lib/translate';
 import { createNotificationAndPush } from '@/lib/notify';
 
+export const dynamic = 'force-dynamic';
+
 /** Check if userId can read chatId. Returns null if allowed, or error response. */
 async function checkCanReadChat(chatId: string, userId: string): Promise<ReturnType<typeof errorResponse> | null> {
   const [chatRows] = await pool.query(

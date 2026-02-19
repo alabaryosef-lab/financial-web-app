@@ -3,6 +3,8 @@ import pool from '@/lib/db';
 import { saveNotificationTranslations } from '@/lib/translations';
 import { successResponse, errorResponse, validationError, serverError } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get('userId');

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { successResponse, errorResponse, serverError, unauthorizedError } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * PUT /api/chat/[id]/pin
  * Toggle pin status of a chat room (admin only)
