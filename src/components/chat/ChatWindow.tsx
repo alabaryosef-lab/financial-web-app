@@ -43,11 +43,14 @@ export function ChatWindow({ messages, onSendMessage, title, chatId, readOnly, o
     if (!el) return;
 
     const handleScroll = () => {
-      const threshold = 100; // pixels from bottom
-      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+      const threshold = 150; // pixels from bottom
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      const isNearBottom = distanceFromBottom < threshold;
+      
+      // Update scroll state: user has scrolled up if not near bottom
       isUserScrollingRef.current = !isNearBottom;
 
-      // Clear any pending scroll timeout
+      // Clear any pending auto-scroll timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
         scrollTimeoutRef.current = null;
@@ -79,17 +82,28 @@ export function ChatWindow({ messages, onSendMessage, title, chatId, readOnly, o
     const isInitialLoad = prevMessageCountRef.current === 0 && currentMessageCount > 0;
     prevMessageCountRef.current = currentMessageCount;
 
-    // Auto-scroll if:
-    // 1. Initial load (first messages), OR
-    // 2. New messages added and user is near bottom
-    if (isInitialLoad || (hasNewMessages && !isUserScrollingRef.current)) {
-      const scrollToBottom = () => {
-        if (el && (isInitialLoad || !isUserScrollingRef.current)) {
-          el.scrollTop = el.scrollHeight;
+    // Check current scroll position before auto-scrolling
+    const checkAndScroll = () => {
+      if (!el) return;
+      const threshold = 150;
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      const isNearBottom = distanceFromBottom < threshold;
+      
+      // Only auto-scroll if:
+      // 1. Initial load (first messages), OR
+      // 2. New messages added AND user is near bottom (hasn't scrolled up)
+      if (isInitialLoad || (hasNewMessages && isNearBottom && !isUserScrollingRef.current)) {
+        el.scrollTop = el.scrollHeight;
+        // Reset scroll state after scrolling to bottom
+        if (isInitialLoad) {
+          isUserScrollingRef.current = false;
         }
-      };
+      }
+    };
+
+    if (isInitialLoad || hasNewMessages) {
       requestAnimationFrame(() => {
-        requestAnimationFrame(scrollToBottom);
+        requestAnimationFrame(checkAndScroll);
       });
     }
   }, [messages.length]);
@@ -97,19 +111,21 @@ export function ChatWindow({ messages, onSendMessage, title, chatId, readOnly, o
   // Handle image load - scroll only once per image if user is near bottom
   const handleImageLoad = () => {
     const el = messagesContainerRef.current;
-    if (!el || isUserScrollingRef.current) return;
+    if (!el) return;
 
     // Debounce scroll to avoid multiple scrolls during image loading
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
     scrollTimeoutRef.current = setTimeout(() => {
-      if (el && !isUserScrollingRef.current) {
-        const threshold = 150;
-        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-        if (isNearBottom) {
-          el.scrollTop = el.scrollHeight;
-        }
+      if (!el) return;
+      const threshold = 150;
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      const isNearBottom = distanceFromBottom < threshold;
+      
+      // Only scroll if user is near bottom and hasn't manually scrolled up
+      if (isNearBottom && !isUserScrollingRef.current) {
+        el.scrollTop = el.scrollHeight;
       }
       scrollTimeoutRef.current = null;
     }, 100);
