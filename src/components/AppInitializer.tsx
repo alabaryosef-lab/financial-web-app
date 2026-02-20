@@ -86,9 +86,16 @@ export function AppInitializer({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Password reset pages disabled - redirect to login
+    if (pathname === '/forgot-password' || pathname === '/reset-password') {
+      schedule(() => router.push('/login'));
+      done();
+      return;
+    }
+
     if (
       !isAuthenticated &&
-      (pathname === '/login' || pathname === '/forgot-password' || pathname === '/reset-password')
+      pathname === '/login'
     ) {
       done();
       return;
@@ -102,8 +109,7 @@ export function AppInitializer({ children }: { children: React.ReactNode }) {
 
     if (
       !isAuthenticated &&
-      pathname !== '/login' &&
-      pathname !== '/forgot-password' && pathname !== '/reset-password'
+      pathname !== '/login'
     ) {
       schedule(() => router.push('/login'));
       done();
