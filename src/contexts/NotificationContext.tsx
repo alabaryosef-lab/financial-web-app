@@ -19,12 +19,42 @@ export function NotificationProvider({ children, userId, locale }: { children: R
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const prevUnreadIdsRef = React.useRef<Set<string>>(new Set());
+  const audioUnlockedRef = React.useRef<boolean>(false);
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+
+  // Unlock audio on first user interaction (browser requirement)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const unlockAudio = () => {
+      if (audioUnlockedRef.current) return;
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = ctx;
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        audioUnlockedRef.current = true;
+      } catch (e) {
+        console.warn('Failed to unlock audio:', e);
+      }
+    };
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
 
   const playBeepSound = useCallback(() => {
     if (typeof window === 'undefined') return;
     try {
       const audio = new Audio('/notification-beep.wav');
       audio.volume = 0.5;
+      // Unlock audio context if needed
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
       audio.play().catch((err) => {
         console.warn('Failed to play notification sound:', err);
       });
@@ -51,14 +81,13 @@ export function NotificationProvider({ children, userId, locale }: { children: R
         );
         const prevUnreadIds = prevUnreadIdsRef.current;
         
-        // If there are new unread notifications that weren't in previous set, play beep
-        if (prevUnreadIds.size > 0) {
+        // Play beep if there are new unread notifications that weren't in previous set
+        // Skip on initial load (when prevUnreadIds is empty and this is the first fetch)
+        if (prevUnreadIds.size >= 0 && prevUnreadIds.size !== newUnreadIds.size) {
           const hasNewUnread = Array.from(newUnreadIds).some(id => !prevUnreadIds.has(id));
           if (hasNewUnread) {
             playBeepSound();
           }
-        } else if (newUnreadIds.size > 0) {
-          // First load with unread notifications - don't beep
         }
         
         prevUnreadIdsRef.current = newUnreadIds;
