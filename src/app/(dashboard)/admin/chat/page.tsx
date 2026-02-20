@@ -103,9 +103,26 @@ export default function AdminChatPage() {
       const data = await response.json();
       if (data.success) {
         setMessages(data.data);
+        // Mark chat as read when messages are fetched
+        markChatAsRead(chatId);
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error);
+    }
+  };
+
+  const markChatAsRead = async (chatId: string) => {
+    if (!user?.id) return;
+    try {
+      await fetch(`/api/chat/${chatId}/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      // Refresh chat list to update unread counts
+      fetchChats();
+    } catch (error) {
+      console.error('Failed to mark chat as read:', error);
     }
   };
 
@@ -355,17 +372,26 @@ export default function AdminChatPage() {
                           <div className="flex items-center gap-2">
                             <Pin className="w-4 h-4 text-primary-600 shrink-0" fill="currentColor" strokeWidth={2} aria-label={t('chat.pinned')} />
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-neutral-900">
-                                {chat.type === 'internal_room'
-                                  ? translateRoomName(chat.roomName)
-                                  : chat.participantNames && chat.participantNames.length > 0
-                                  ? chat.participantNames.join(', ')
-                                  : t('chat.customerChat')}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-neutral-900">
+                                  {chat.type === 'internal_room'
+                                    ? translateRoomName(chat.roomName)
+                                    : chat.participantNames && chat.participantNames.length > 0
+                                    ? chat.participantNames.join(', ')
+                                    : t('chat.customerChat')}
+                                </p>
+                                {chat.unreadCount > 0 && (
+                                  <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold">
+                                    {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                                  </span>
+                                )}
+                              </div>
                               {chat.lastMessage && (
                                 <p className={`text-sm mt-1 truncate ${
                                   chat.lastMessage.isDeleted 
                                     ? 'text-neutral-400 italic' 
+                                    : chat.unreadCount > 0
+                                    ? 'text-neutral-900 font-medium'
                                     : 'text-neutral-600'
                                 }`}>
                                   {chat.lastMessage.content}
@@ -421,15 +447,28 @@ export default function AdminChatPage() {
                           }}
                           className="flex-1 p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors touch-manipulation"
                         >
-                          <p className="font-semibold text-neutral-900">
-                            {chat.type === 'internal_room'
-                              ? translateRoomName(chat.roomName)
-                              : chat.participantNames && chat.participantNames.length > 0
-                              ? chat.participantNames.join(', ')
-                              : t('chat.customerChat')}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-neutral-900">
+                              {chat.type === 'internal_room'
+                                ? translateRoomName(chat.roomName)
+                                : chat.participantNames && chat.participantNames.length > 0
+                                ? chat.participantNames.join(', ')
+                                : t('chat.customerChat')}
+                            </p>
+                            {chat.unreadCount > 0 && (
+                              <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold">
+                                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                              </span>
+                            )}
+                          </div>
                           {chat.lastMessage && chat.lastMessage.content && (
-                            <p className="text-sm text-neutral-600 mt-1 truncate">{chat.lastMessage.content}</p>
+                            <p className={`text-sm mt-1 truncate ${
+                              chat.unreadCount > 0
+                                ? 'text-neutral-900 font-medium'
+                                : 'text-neutral-600'
+                            }`}>
+                              {chat.lastMessage.content}
+                            </p>
                           )}
                         </button>
                         <div className="flex items-center gap-1 px-2">

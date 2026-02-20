@@ -133,6 +133,32 @@ export async function GET(request: NextRequest) {
           });
         }
 
+        // Get unread count: messages after last_read_at timestamp
+        const [readStatus] = await pool.query(
+          `SELECT last_read_at FROM chat_read_status WHERE chat_id = ? AND user_id = ?`,
+          [chat.id, userId]
+        ) as any[];
+        
+        const lastReadAt = readStatus.length > 0 ? readStatus[0].last_read_at : null;
+        
+        let unreadCount = 0;
+        if (lastReadAt) {
+          const [unreadMessages] = await pool.query(
+            `SELECT COUNT(*) as count FROM chat_messages 
+             WHERE chat_id = ? AND sender_id != ? AND timestamp > ? AND is_deleted = FALSE`,
+            [chat.id, userId, lastReadAt]
+          ) as any[];
+          unreadCount = unreadMessages[0]?.count || 0;
+        } else if (lastMessage) {
+          // If never read and there are messages, count messages not sent by user
+          const [allUnread] = await pool.query(
+            `SELECT COUNT(*) as count FROM chat_messages 
+             WHERE chat_id = ? AND sender_id != ? AND is_deleted = FALSE`,
+            [chat.id, userId]
+          ) as any[];
+          unreadCount = allUnread[0]?.count || 0;
+        }
+
         return {
           id: chat.id,
           type: chat.type,
@@ -142,7 +168,7 @@ export async function GET(request: NextRequest) {
           pinnedAt: chat.pinned_at || null,
           createdBy: chat.created_by || null,
           lastMessage,
-          unreadCount: 0, // TODO: Implement unread count
+          unreadCount,
           createdAt: chat.created_at,
           updatedAt: chat.updated_at,
         };

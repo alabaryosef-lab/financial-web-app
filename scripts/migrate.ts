@@ -302,6 +302,23 @@ async function migrate() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // Create chat_read_status table to track last read timestamp per user per chat
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS chat_read_status (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        chat_id VARCHAR(255) NOT NULL,
+        user_id VARCHAR(255) NOT NULL,
+        last_read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_chat_user (chat_id, user_id),
+        INDEX idx_chat_id (chat_id),
+        INDEX idx_user_id (user_id),
+        INDEX idx_last_read_at (last_read_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // Create notifications table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS notifications (

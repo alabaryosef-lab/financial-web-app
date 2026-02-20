@@ -81,9 +81,26 @@ export default function CustomerChatPage() {
       const data = await response.json();
       if (data.success) {
         setMessages(data.data);
+        // Mark chat as read when messages are fetched
+        markChatAsRead(chatId);
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error);
+    }
+  };
+
+  const markChatAsRead = async (chatId: string) => {
+    if (!user?.id) return;
+    try {
+      await fetch(`/api/chat/${chatId}/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      // Refresh chat list to update unread counts
+      fetchChats();
+    } catch (error) {
+      console.error('Failed to mark chat as read:', error);
     }
   };
 
@@ -233,15 +250,28 @@ export default function CustomerChatPage() {
                   selectedChat === chat.id ? 'bg-primary-50' : ''
                 }`}
               >
-                <p className="font-semibold text-neutral-900">
-                  {chat.participantNames && chat.participantNames.length > 0
-                    ? chat.participantNames[0]
-                    : assignedEmployee
-                    ? assignedEmployee.name
-                    : t('chat.employee')}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-neutral-900">
+                    {chat.participantNames && chat.participantNames.length > 0
+                      ? chat.participantNames[0]
+                      : assignedEmployee
+                      ? assignedEmployee.name
+                      : t('chat.employee')}
+                  </p>
+                  {chat.unreadCount > 0 && (
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold">
+                      {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                    </span>
+                  )}
+                </div>
                 {chat.lastMessage && (
-                  <p className="text-sm text-neutral-600 mt-1 truncate">{chat.lastMessage.content}</p>
+                  <p className={`text-sm mt-1 truncate ${
+                    chat.unreadCount > 0
+                      ? 'text-neutral-900 font-medium'
+                      : 'text-neutral-600'
+                  }`}>
+                    {chat.lastMessage.content}
+                  </p>
                 )}
               </button>
             ))}
