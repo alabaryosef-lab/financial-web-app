@@ -11,10 +11,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
+  { params }: { params: Promise<{ filename: string }> | { filename: string } }
 ) {
   try {
-    const filename = params.filename;
+    // Handle both sync and async params (Next.js 13+)
+    const resolvedParams = await Promise.resolve(params);
+    const filename = resolvedParams.filename;
+    
+    if (!filename) {
+      return errorResponse('Filename is required', 400, 'error.invalidFilename');
+    }
     
     // Security: prevent directory traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
@@ -47,13 +53,14 @@ export async function GET(
         },
       });
     } catch (error: any) {
+      console.error('File read error:', error?.code, error?.message, filePath);
       if (error.code === 'ENOENT') {
         return notFoundError('File');
       }
       throw error;
     }
   } catch (error: any) {
-    console.error('File serve error:', error);
-    return errorResponse('Failed to serve file', 500, 'error.fileServeError');
+    console.error('File serve error:', error?.code, error?.message, error?.stack);
+    return errorResponse(`Failed to serve file: ${error?.message || 'Unknown error'}`, 500, 'error.fileServeError');
   }
 }
