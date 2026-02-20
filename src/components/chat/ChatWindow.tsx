@@ -241,25 +241,32 @@ export function ChatWindow({ messages, onSendMessage, title, chatId, readOnly, o
                           </div>
                         )}
                       </div>
-                      {message.fileUrl && (
-                        <div className="mb-2">
-                          {message.fileType?.startsWith('image/') ? (
-                            <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="block">
-                              <img src={message.fileUrl} alt={message.fileName || ''} className="max-w-full max-h-48 rounded object-contain" />
-                            </a>
-                          ) : (
-                            <a
-                              href={message.fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download={message.fileName}
-                              className="text-sm underline"
-                            >
-                              {message.fileName || t('chat.file')} ({message.fileType?.includes('pdf') ? 'Preview/Download' : 'Download'})
-                            </a>
-                          )}
-                        </div>
-                      )}
+                      {message.fileUrl && (() => {
+                        // Convert old /assets/ URLs to /api/assets/ for proper serving
+                        const fileUrl = message.fileUrl.startsWith('/assets/')
+                          ? message.fileUrl.replace('/assets/', '/api/assets/')
+                          : message.fileUrl;
+                        
+                        return (
+                          <div className="mb-2">
+                            {message.fileType?.startsWith('image/') ? (
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                <img src={fileUrl} alt={message.fileName || ''} className="max-w-full max-h-48 rounded object-contain" />
+                              </a>
+                            ) : (
+                              <a
+                                href={fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={message.fileName}
+                                className="text-sm underline"
+                              >
+                                {message.fileName || t('chat.file')} ({message.fileType?.includes('pdf') ? 'Preview/Download' : 'Download'})
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {message.content ? <p className="text-sm">{message.content}</p> : null}
                       <p className={`text-xs mt-1 flex items-center gap-1 ${
                         isOwn ? 'text-white/70' : 'text-neutral-500'
