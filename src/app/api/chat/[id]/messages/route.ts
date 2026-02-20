@@ -132,9 +132,13 @@ export async function GET(
         ? (msg.content_ar || msg.content_en || '')
         : (msg.content_en || msg.content_ar || '');
       
-      const senderName = locale === 'ar'
-        ? (msg.sender_name_ar || msg.sender_name_en || msg.sender_name)
-        : (msg.sender_name_en || msg.sender_name_ar || msg.sender_name);
+      // Use consistent sender name - prefer original sender_name, then fallback to translations
+      // This prevents name switching between polls
+      const senderName = msg.sender_name || 
+        (locale === 'ar'
+          ? (msg.sender_name_ar || msg.sender_name_en)
+          : (msg.sender_name_en || msg.sender_name_ar)) ||
+        'Unknown';
 
       return {
         id: msg.id,
