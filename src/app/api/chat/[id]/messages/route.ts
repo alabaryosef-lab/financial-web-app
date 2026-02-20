@@ -132,12 +132,12 @@ export async function GET(
         ? (msg.content_ar || msg.content_en || '')
         : (msg.content_en || msg.content_ar || '');
       
-      // Use consistent sender name - prefer original sender_name, then fallback to translations
-      // This prevents name switching between polls
+      // Use consistent sender name - always use same name regardless of locale
+      // Priority: sender_name > sender_name_en > sender_name_ar
+      // This prevents name switching when user changes language
       const senderName = msg.sender_name || 
-        (locale === 'ar'
-          ? (msg.sender_name_ar || msg.sender_name_en)
-          : (msg.sender_name_en || msg.sender_name_ar)) ||
+        msg.sender_name_en || 
+        msg.sender_name_ar || 
         'Unknown';
 
       return {
