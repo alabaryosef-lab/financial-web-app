@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Loader } from '@/components/ui/Loader';
@@ -10,6 +11,7 @@ import { Chat, ChatMessage } from '@/types';
 import type { Customer } from '@/types';
 
 export default function EmployeeChatPage() {
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
@@ -24,7 +26,18 @@ export default function EmployeeChatPage() {
       fetchChats();
       fetchAssignedCustomers();
     }
-  }, [user?.id, locale]);
+  }, [user?.id, locale, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id) {
+        fetchChats();
+        fetchAssignedCustomers();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id, locale, pathname]);
 
   const fetchAssignedCustomers = async () => {
     try {

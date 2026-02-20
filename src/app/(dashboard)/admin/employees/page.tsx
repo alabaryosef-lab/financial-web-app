@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Edit, UserX, UserPlus, Search, Trash2, UserCheck } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Plus, Edit, UserX, Search, Trash2, UserCheck } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -14,6 +14,7 @@ import { formatNumber } from '@/lib/utils';
 
 export default function EmployeesPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,15 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') fetchEmployees();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [pathname]);
 
   const fetchEmployees = async () => {
     try {
@@ -203,21 +212,10 @@ export default function EmployeesPage() {
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-neutral-900 mb-2">{t('common.employees')}</h1>
           <p className="text-sm text-neutral-600">{t('page.manageEmployees')}</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={handleCreate}
-            className="p-2.5 rounded-xl border-2 border-primary-200 text-primary-600 hover:bg-primary-50 hover:border-primary-300 transition-colors"
-            title={t('page.createEmployee')}
-            aria-label={t('page.createEmployee')}
-          >
-            <UserPlus className="w-5 h-5" />
-          </button>
-          <Button type="button" onClick={handleCreate} variant="primary" size="medium" className="flex-1 sm:flex-initial whitespace-nowrap">
+        <Button type="button" onClick={handleCreate} variant="primary" size="medium" className="w-full sm:w-auto whitespace-nowrap">
             <Plus className="w-4 h-4 me-2" />
             {t('page.createEmployee')}
           </Button>
-        </div>
       </div>
 
       <Card variant="elevated" padding="large">

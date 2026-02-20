@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Users, FileText } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Loader } from '@/components/ui/Loader';
@@ -11,6 +11,7 @@ import { getLoanStatusColor, formatCurrency, formatNumber } from '@/lib/utils';
 
 export default function EmployeeDashboard() {
   const router = useRouter();
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const [assignedCustomers, setAssignedCustomers] = useState<any[]>([]);
@@ -21,10 +22,19 @@ export default function EmployeeDashboard() {
     if (user?.id) {
       fetchData();
     }
-  }, [user?.id, locale]);
+  }, [user?.id, locale, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id) fetchData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id, locale, pathname]);
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [customersRes, loansRes] = await Promise.all([
         fetch(`/api/employees/${user?.id}/customers`),
         fetch(`/api/loans?employeeId=${user?.id}&locale=${locale}`),

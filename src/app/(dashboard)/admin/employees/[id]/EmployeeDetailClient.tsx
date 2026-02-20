@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { ArrowLeft, Edit, Mail, UserCheck, Users, Trash2, UserX } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +16,7 @@ import { formatDateOnly, formatNumber } from '@/lib/utils';
 export function EmployeeDetailClient() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const employeeId = params.id as string;
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -33,7 +34,18 @@ export function EmployeeDetailClient() {
   React.useEffect(() => {
     fetchEmployee();
     fetchAssignedCustomers();
-  }, [employeeId]);
+  }, [employeeId, pathname]);
+
+  React.useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchEmployee();
+        fetchAssignedCustomers();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [employeeId, pathname]);
 
   const fetchEmployee = async () => {
     try {

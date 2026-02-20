@@ -191,6 +191,16 @@ export async function POST(request: NextRequest) {
         ]
       );
 
+      // Ensure customer is assigned to the selected employee (for chat, employee's customer list, etc.)
+      await connection.query(
+        'UPDATE customers SET assigned_employee_id = ? WHERE id = ?',
+        [employeeId, customerId]
+      );
+      await connection.query(
+        `INSERT IGNORE INTO employee_customer_assignments (employee_id, customer_id) VALUES (?, ?)`,
+        [employeeId, customerId]
+      );
+
       await connection.commit();
     } catch (error) {
       await connection.rollback();

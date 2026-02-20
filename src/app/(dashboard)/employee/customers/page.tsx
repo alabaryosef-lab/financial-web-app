@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Loader } from '@/components/ui/Loader';
 import { Input } from '@/components/ui/Input';
@@ -11,6 +12,7 @@ import { Customer } from '@/types';
 import { Search } from 'lucide-react';
 
 export default function EmployeeCustomersPage() {
+  const pathname = usePathname();
   const { t } = useLocale();
   const { user } = useAuth();
   const [assignedCustomers, setAssignedCustomers] = useState<Customer[]>([]);
@@ -21,7 +23,15 @@ export default function EmployeeCustomersPage() {
     if (user?.id) {
       fetchCustomers();
     }
-  }, [user?.id]);
+  }, [user?.id, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id) fetchCustomers();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id, pathname]);
 
   const fetchCustomers = async () => {
     try {

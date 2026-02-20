@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { ArrowLeft, Edit, User, UserCheck, Calendar, DollarSign, Percent, FileText, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,6 +17,7 @@ import { getLoanStatusColor, formatDate, formatDateOnly, formatCurrency, formatN
 export function LoanDetailClient() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const loanId = params.id as string;
@@ -100,7 +101,15 @@ export function LoanDetailClient() {
 
   React.useEffect(() => {
     fetchLoan();
-  }, [loanId, locale]);
+  }, [loanId, locale, pathname]);
+
+  React.useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') fetchLoan();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [loanId, locale, pathname]);
 
   if (loading) {
     return (

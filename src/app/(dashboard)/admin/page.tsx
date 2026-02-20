@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Users, UserCheck, FileText, MessageSquare } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Loader } from '@/components/ui/Loader';
@@ -11,6 +11,7 @@ import { getLoanStatusColor, formatCurrency, formatNumber } from '@/lib/utils';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const { t, locale } = useLocale();
   const [customers, setCustomers] = useState<any[]>([]);
@@ -21,15 +22,24 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [locale, user && user.id]);
+  }, [locale, user?.id, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id) fetchData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [locale, user?.id, pathname]);
 
   const fetchData = async () => {
-    if (!user || !user.id) return;
+    if (!user?.id) return;
     try {
+      setLoading(true);
       const [customersRes, employeesRes, loansRes, chatsRes] = await Promise.all([
         fetch('/api/customers'),
         fetch('/api/employees'),
-        fetch(`/api/loans?locale=${locale}`),
+        fetch(`/api/loans?locale=${locale}&userId=${user.id}`),
         fetch(`/api/chat?userId=${user.id}`),
       ]);
 

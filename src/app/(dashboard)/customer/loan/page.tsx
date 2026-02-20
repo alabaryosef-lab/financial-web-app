@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Loader } from '@/components/ui/Loader';
@@ -9,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getLoanStatusColor, formatDateOnly, formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
 
 export default function CustomerLoanPage() {
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const [customerLoans, setCustomerLoans] = useState<any[]>([]);
@@ -18,7 +20,15 @@ export default function CustomerLoanPage() {
     if (user?.id) {
       fetchLoans();
     }
-  }, [user?.id, locale]);
+  }, [user?.id, locale, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id) fetchLoans();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id, locale, pathname]);
 
   const fetchLoans = async () => {
     try {

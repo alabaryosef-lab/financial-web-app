@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +15,7 @@ import type { Employee } from '@/types';
 import { Pin, PinOff, Trash2, Bookmark } from 'lucide-react';
 
 export default function AdminChatPage() {
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
@@ -35,7 +37,18 @@ export default function AdminChatPage() {
       fetchChats();
       fetchEmployees();
     }
-  }, [user?.id, locale]);
+  }, [user?.id, locale, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id) {
+        fetchChats();
+        fetchEmployees();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id, locale, pathname]);
 
   const fetchEmployees = async () => {
     try {

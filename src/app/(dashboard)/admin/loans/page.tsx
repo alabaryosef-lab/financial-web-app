@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Plus, Edit, Search, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +16,7 @@ import { getLoanStatusColor, formatCurrency, formatNumber, formatPercent, toDate
 
 export default function LoansPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -46,7 +47,19 @@ export default function LoansPage() {
     if (user?.id) fetchLoans();
     fetchCustomers();
     fetchEmployees();
-  }, [locale, user?.id]);
+  }, [locale, user?.id, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        if (user?.id) fetchLoans();
+        fetchCustomers();
+        fetchEmployees();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [locale, user?.id, pathname]);
 
   const fetchLoans = async () => {
     if (!user?.id) return;

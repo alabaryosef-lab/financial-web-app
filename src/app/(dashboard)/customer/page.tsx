@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { FileText, MessageSquare } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -13,6 +13,7 @@ import Link from 'next/link';
 
 export default function CustomerDashboard() {
   const router = useRouter();
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const [customerLoans, setCustomerLoans] = useState<any[]>([]);
@@ -22,10 +23,19 @@ export default function CustomerDashboard() {
     if (user?.id) {
       fetchLoans();
     }
-  }, [user?.id, locale]);
+  }, [user?.id, locale, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id) fetchLoans();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id, locale, pathname]);
 
   const fetchLoans = async () => {
     try {
+      setLoading(true);
       const response = await fetch(`/api/loans?customerId=${user?.id}&locale=${locale}`);
       const data = await response.json();
       if (data.success) {

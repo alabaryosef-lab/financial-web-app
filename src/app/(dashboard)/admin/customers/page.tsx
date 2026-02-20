@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Plus, Edit, UserPlus, Search, Trash2, UserX, UserCheck } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,7 @@ import { Customer } from '@/types';
 
 export default function CustomersPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useLocale();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -33,7 +34,18 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
     fetchEmployees();
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchCustomers();
+        fetchEmployees();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [pathname]);
 
   const fetchCustomers = async () => {
     try {

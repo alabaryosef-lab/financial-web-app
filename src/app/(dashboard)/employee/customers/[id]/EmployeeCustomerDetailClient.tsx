@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { ArrowLeft, Mail, Phone, MapPin, FileText } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +15,7 @@ import { getLoanStatusColor, formatDateOnly, formatCurrency, formatNumber, forma
 export function EmployeeCustomerDetailClient() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const customerId = params.id as string;
@@ -27,7 +28,18 @@ export function EmployeeCustomerDetailClient() {
       fetchCustomer();
       fetchLoans();
     }
-  }, [user?.id, customerId, locale]);
+  }, [user?.id, customerId, locale, pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && user?.id && customerId) {
+        fetchCustomer();
+        fetchLoans();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user?.id, customerId, locale, pathname]);
 
   const fetchCustomer = async () => {
     try {
