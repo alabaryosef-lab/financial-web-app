@@ -35,6 +35,15 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(assetsDir, fileName);
     const bytes = await file.arrayBuffer();
     await writeFile(filePath, Buffer.from(bytes));
+    
+    // Set file permissions (readable by all, writable by owner)
+    try {
+      const { chmod } = await import('fs/promises');
+      await chmod(filePath, 0o644);
+    } catch (permError) {
+      console.warn('Failed to set file permissions:', permError);
+      // Continue anyway - file is written
+    }
 
     // Use API route for file serving to ensure proper access
     const fileUrl = `/api/assets/${fileName}`;
