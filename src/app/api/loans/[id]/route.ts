@@ -12,6 +12,12 @@ export async function GET(
 ) {
   try {
     const locale = request.nextUrl.searchParams.get('locale') || 'en';
+    const userId = request.nextUrl.searchParams.get('userId');
+    let isEmployee = false;
+    if (userId) {
+      const [ur] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]) as any[];
+      isEmployee = ur.length > 0 && ur[0].role === 'employee';
+    }
 
     const [rows] = await pool.query(
       `SELECT l.*,
@@ -28,13 +34,35 @@ export async function GET(
       return notFoundError('Loan');
     }
 
+    // Employees must not see loans for deleted/blocked customers
+    if (isEmployee) {
+      const [cust] = await pool.query(
+        `SELECT id FROM users WHERE id = ? AND role = 'customer'
+         AND (is_deleted = FALSE OR is_deleted IS NULL) AND is_active = TRUE`,
+        [rows[0].customer_id]
+      ) as any[];
+      if (cust.length === 0) {
+        return notFoundError('Loan');
+      }
+    }
+
     const loan = rows[0];
     const notes = locale === 'ar' ? (loan.notes_ar || loan.notes_en || null) : (loan.notes_en || loan.notes_ar || null);
     const startDateVal = loan.start_date ? String(loan.start_date).slice(0, 10) : loan.start_date;
+
+    const [empRows] = await pool.query(
+      'SELECT employee_id FROM loan_employees WHERE loan_id = ? ORDER BY employee_id',
+      [params.id]
+    ) as any[];
+    const employeeIds = empRows.length > 0
+      ? empRows.map((r: any) => r.employee_id)
+      : [loan.employee_id];
+
     const loanData = {
       id: loan.id,
       customerId: loan.customer_id,
       employeeId: loan.employee_id,
+      employeeIds,
       amount: parseFloat(loan.amount),
       interestRate: parseFloat(loan.interest_rate),
       numberOfInstallments: loan.number_of_installments,
@@ -232,6 +260,9 @@ export async function DELETE(
       return notFoundError('Loan');
     }
 
+    // Delete loan chat and related data first (chats CASCADE to messages/participants)
+    await pool.query('DELETE FROM chats WHERE loan_id = ?', [params.id]);
+    await pool.query('DELETE FROM loan_employees WHERE loan_id = ?', [params.id]);
     await pool.query('DELETE FROM loans WHERE id = ?', [params.id]);
 
     return successResponse({}, 'Loan deleted successfully', 'error.loanDeletedSuccessfully');

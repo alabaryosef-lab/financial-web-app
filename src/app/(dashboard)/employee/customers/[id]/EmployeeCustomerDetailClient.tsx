@@ -43,7 +43,7 @@ export function EmployeeCustomerDetailClient() {
 
   const fetchCustomer = async () => {
     try {
-      const response = await fetch(`/api/customers/${customerId}`);
+      const response = await fetch(`/api/customers/${customerId}${user?.id ? `?userId=${encodeURIComponent(user.id)}` : ''}`);
       const data = await response.json();
       if (data.success && data.data.assignedEmployeeId === user?.id) {
         setCustomer(data.data);

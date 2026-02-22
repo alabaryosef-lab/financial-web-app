@@ -13,7 +13,16 @@ export async function GET(
     if (!id) {
       return notFoundError('Customer');
     }
+    const userId = request.nextUrl.searchParams.get('userId');
+    let isEmployee = false;
+    if (userId) {
+      const [ur] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]) as any[];
+      isEmployee = ur.length > 0 && ur[0].role === 'employee';
+    }
     let rows: any[];
+    const customerFilter = isEmployee
+      ? ` AND (u.is_deleted = FALSE OR u.is_deleted IS NULL) AND u.is_active = TRUE`
+      : '';
     try {
       [rows] = await pool.query(
         `SELECT u.*, 
@@ -26,11 +35,12 @@ export async function GET(
         INNER JOIN customers c ON u.id = c.id
         LEFT JOIN user_translations ut_en ON u.id = ut_en.user_id AND ut_en.locale = 'en'
         LEFT JOIN user_translations ut_ar ON u.id = ut_ar.user_id AND ut_ar.locale = 'ar'
-        WHERE u.id = ? AND u.role = 'customer'`,
+        WHERE u.id = ? AND u.role = 'customer'${customerFilter}`,
         [id]
       ) as any[];
     } catch (e: any) {
       if (e?.code === 'ER_BAD_FIELD_ERROR' && e?.message?.includes('is_deleted')) {
+        const activeFilter = isEmployee ? ' AND u.is_active = TRUE' : '';
         [rows] = await pool.query(
           `SELECT u.*, 
             ut_en.name as name_en,
@@ -42,7 +52,7 @@ export async function GET(
           INNER JOIN customers c ON u.id = c.id
           LEFT JOIN user_translations ut_en ON u.id = ut_en.user_id AND ut_en.locale = 'en'
           LEFT JOIN user_translations ut_ar ON u.id = ut_ar.user_id AND ut_ar.locale = 'ar'
-          WHERE u.id = ? AND u.role = 'customer'`,
+          WHERE u.id = ? AND u.role = 'customer'${activeFilter}`,
           [id]
         ) as any[];
       } else {

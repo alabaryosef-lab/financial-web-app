@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Loader } from '@/components/ui/Loader';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,6 +42,8 @@ export function LoanDetailClient() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
+  const [allEmployees, setAllEmployees] = useState<any[]>([]);
+  const [addRemoveLoading, setAddRemoveLoading] = useState(false);
 
   const fetchLoan = async () => {
     try {
@@ -102,6 +105,19 @@ export function LoanDetailClient() {
   React.useEffect(() => {
     fetchLoan();
   }, [loanId, locale, pathname]);
+
+  React.useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await fetch('/api/employees');
+        const data = await res.json();
+        if (data.success) setAllEmployees(data.data || []);
+      } catch (e) {
+        console.error('Failed to fetch employees:', e);
+      }
+    };
+    fetchEmployees();
+  }, []);
 
   React.useEffect(() => {
     const onVisible = () => {
@@ -334,6 +350,92 @@ export function LoanDetailClient() {
                 </div>
               )}
             </div>
+            {(loan.employeeIds && loan.employeeIds.length > 0) || loan.employeeId ? (
+              <div className="mt-4 pt-4 border-t border-neutral-100 text-left rtl:text-right">
+                <p className="text-sm text-neutral-600 mb-2">{t('detail.assignedEmployeesOnLoan')}</p>
+                <ul className="space-y-2">
+                  {(loan.employeeIds && loan.employeeIds.length > 0 ? loan.employeeIds : [loan.employeeId]).map((empId: string) => {
+                    const emp = (empId === loan.employeeId && employee) ? employee : allEmployees.find((e: any) => e.id === empId);
+                    const isPrimary = empId === loan.employeeId;
+                    return (
+                      <li key={empId} className="flex items-center justify-between gap-2 p-2 bg-neutral-50 rounded-lg">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-neutral-900 truncate">{emp ? emp.name : empId}</p>
+                          {emp?.email && <p className="text-sm text-neutral-600 truncate">{emp.email}</p>}
+                          {isPrimary && <span className="text-xs text-primary-600">{t('detail.primaryEmployee')}</span>}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!isPrimary && (
+                            <Button
+                              variant="outline"
+                              size="small"
+                              disabled={addRemoveLoading}
+                              onClick={async () => {
+                                setAddRemoveLoading(true);
+                                try {
+                                  const r = await fetch(`/api/loans/${loanId}/primary?userId=${encodeURIComponent(user?.id ?? '')}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ employeeId: empId }),
+                                  });
+                                  const d = await r.json();
+                                  if (d.success) await fetchLoan();
+                                } finally {
+                                  setAddRemoveLoading(false);
+                                }
+                              }}
+                            >
+                              {t('detail.markAsPrimary')}
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="small"
+                            disabled={addRemoveLoading || ((loan.employeeIds?.length ?? 1) <= 1)}
+                            onClick={async () => {
+                              setAddRemoveLoading(true);
+                              try {
+                                const r = await fetch(`/api/loans/${loanId}/employees?employeeId=${encodeURIComponent(empId)}`, { method: 'DELETE' });
+                                const d = await r.json();
+                                if (d.success) await fetchLoan();
+                              } finally {
+                                setAddRemoveLoading(false);
+                              }
+                            }}
+                          >
+                            {t('common.remove')}
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="mt-3">
+                  <SearchableSelect
+                    options={allEmployees
+                      .filter((e: any) => !(loan.employeeIds || [loan.employeeId]).includes(e.id))
+                      .map((e: any) => ({ id: e.id, label: e.name, sublabel: e.email }))}
+                    value=""
+                    onChange={async (id) => {
+                      setAddRemoveLoading(true);
+                      try {
+                        const r = await fetch(`/api/loans/${loanId}/employees`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ employeeId: id }),
+                        });
+                        const d = await r.json();
+                        if (d.success) await fetchLoan();
+                      } finally {
+                        setAddRemoveLoading(false);
+                      }
+                    }}
+                    placeholder={t('detail.addEmployeeToLoan')}
+                    aria-label={t('detail.addEmployeeToLoan')}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         </Card>
       </div>

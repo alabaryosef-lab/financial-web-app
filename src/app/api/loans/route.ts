@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
     if (employeeId) {
       query += ' AND l.employee_id = ?';
       params.push(employeeId);
+      // Employees only see loans for non-deleted, active customers
+      query += ` AND l.customer_id IN (SELECT id FROM users WHERE role = 'customer' AND (is_deleted = FALSE OR is_deleted IS NULL) AND is_active = TRUE)`;
     }
 
     if (status) {
@@ -130,14 +132,19 @@ export async function POST(request: NextRequest) {
     }
     const startDateNorm = typeof startDate === 'string' && startDate.length >= 10 ? startDate.slice(0, 10) : String(startDate);
 
-    // Check if customer exists
+    // Check if customer exists and is not deleted/blocked (admin cannot create loan for them)
     const [customers] = await pool.query(
-      'SELECT id FROM users WHERE id = ? AND role = ?',
-      [customerId, 'customer']
+      `SELECT id FROM users WHERE id = ? AND role = 'customer'
+       AND (is_deleted = FALSE OR is_deleted IS NULL) AND is_active = TRUE`,
+      [customerId]
     ) as any[];
 
     if (customers.length === 0) {
-      return notFoundError('Customer');
+      return errorResponse(
+        'Cannot create loan for deleted or blocked customer.',
+        400,
+        'error.customerDeletedOrBlocked'
+      );
     }
 
     // Check if employee exists
@@ -199,6 +206,21 @@ export async function POST(request: NextRequest) {
       await connection.query(
         `INSERT IGNORE INTO employee_customer_assignments (employee_id, customer_id) VALUES (?, ?)`,
         [employeeId, customerId]
+      );
+
+      // Unified loan chat: one chat per loan, shared by all employees on the loan
+      const loanChatId = `chat-loan-${loanId}`;
+      await connection.query(
+        `INSERT INTO chats (id, type, loan_id) VALUES (?, 'customer_employee', ?)`,
+        [loanChatId, loanId]
+      );
+      await connection.query(
+        `INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?), (?, ?)`,
+        [loanChatId, customerId, loanChatId, employeeId]
+      );
+      await connection.query(
+        `INSERT INTO loan_employees (loan_id, employee_id) VALUES (?, ?)`,
+        [loanId, employeeId]
       );
 
       await connection.commit();

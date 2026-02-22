@@ -9,7 +9,7 @@ const localeForNumbers = (locale: string) => (locale === 'ar' ? 'ar-SA' : 'en-US
 export function formatCurrency(amount: number, locale: string = 'en'): string {
   return new Intl.NumberFormat(localeForNumbers(locale), {
     style: 'currency',
-    currency: 'USD',
+    currency: 'SAR',
   }).format(amount);
 }
 

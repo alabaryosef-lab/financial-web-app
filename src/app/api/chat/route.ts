@@ -64,16 +64,38 @@ export async function GET(request: NextRequest) {
          ORDER BY c.updated_at DESC`,
         [userId]
       ) as any[];
-      const [customerChats] = await pool.query(
-        `SELECT DISTINCT c.*
-         FROM chats c
-         INNER JOIN chat_participants cp ON c.id = cp.chat_id AND cp.user_id = ?
-         INNER JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id != ?
-         INNER JOIN employee_customer_assignments eca ON eca.employee_id = ? AND eca.customer_id = cp2.user_id
-         WHERE c.type = 'customer_employee'
-         ORDER BY c.updated_at DESC`,
-        [userId, userId, userId]
-      ) as any[];
+      // Only show customer_employee chats where the customer is not deleted/blocked
+      let customerChats: any[];
+      try {
+        [customerChats] = await pool.query(
+          `SELECT DISTINCT c.*
+           FROM chats c
+           INNER JOIN chat_participants cp ON c.id = cp.chat_id AND cp.user_id = ?
+           INNER JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id != ?
+           INNER JOIN users cust_user ON cust_user.id = cp2.user_id AND cust_user.role = 'customer'
+             AND (cust_user.is_deleted = FALSE OR cust_user.is_deleted IS NULL) AND cust_user.is_active = TRUE
+           INNER JOIN employee_customer_assignments eca ON eca.employee_id = ? AND eca.customer_id = cp2.user_id
+           WHERE c.type = 'customer_employee'
+           ORDER BY c.updated_at DESC`,
+          [userId, userId, userId]
+        ) as any[];
+      } catch (e: any) {
+        if (e?.code === 'ER_BAD_FIELD_ERROR' && e?.message?.includes('is_deleted')) {
+          [customerChats] = await pool.query(
+            `SELECT DISTINCT c.*
+             FROM chats c
+             INNER JOIN chat_participants cp ON c.id = cp.chat_id AND cp.user_id = ?
+             INNER JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id != ?
+             INNER JOIN users cust_user ON cust_user.id = cp2.user_id AND cust_user.role = 'customer' AND cust_user.is_active = TRUE
+             INNER JOIN employee_customer_assignments eca ON eca.employee_id = ? AND eca.customer_id = cp2.user_id
+             WHERE c.type = 'customer_employee'
+             ORDER BY c.updated_at DESC`,
+            [userId, userId, userId]
+          ) as any[];
+        } else {
+          throw e;
+        }
+      }
       // Merge and sort: pinned first, then by updated_at
       const byId = new Map<string, any>();
       [...customerChats, ...internal].forEach((r: any) => byId.set(r.id, r));
@@ -113,11 +135,12 @@ export async function GET(request: NextRequest) {
           isDeleted: messages[0].is_deleted || false,
         } : undefined;
 
-        // Get participant names
+        // Get participant names and ids (for search)
         let participantNames: string[] = [];
+        let participantIds: string[] = [];
         if (chat.type === 'customer_employee') {
           const [participants] = await pool.query(
-            `SELECT cp.user_id, u.role,
+            `SELECT cp.user_id, u.role, u.email,
               ut_en.name as name_en,
               ut_ar.name as name_ar
             FROM chat_participants cp
@@ -131,6 +154,7 @@ export async function GET(request: NextRequest) {
             if (p.role === 'admin') return 'Admin';
             return p.name_en || p.name_ar || p.user_id;
           });
+          participantIds = participants.map((p: any) => p.user_id);
         }
 
         // Get unread count: messages after last_read_at timestamp
@@ -169,6 +193,7 @@ export async function GET(request: NextRequest) {
           type: chat.type,
           roomName: chat.room_name,
           participantNames,
+          participantIds,
           isPinned: Boolean(chat.is_pinned),
           pinnedAt: chat.pinned_at || null,
           createdBy: chat.created_by || null,

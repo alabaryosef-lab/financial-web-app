@@ -7,12 +7,14 @@ import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Loader } from '@/components/ui/Loader';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { Chat, ChatMessage } from '@/types';
 
 export default function CustomerChatPage() {
   const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -81,8 +83,10 @@ export default function CustomerChatPage() {
       const response = await fetch(`/api/chat/${chatId}/messages?locale=${locale}&userId=${user.id}`);
       const data = await response.json();
       if (data.success) {
-        setMessages(data.data);
-        // Mark chat as read when messages are fetched
+        const newList = data.data as ChatMessage[];
+        const newFromOther = messages.length > 0 && newList.length > messages.length && newList[newList.length - 1]?.senderId !== user?.id;
+        setMessages(newList);
+        if (newFromOther) refreshNotifications();
         markChatAsRead(chatId);
       }
     } catch (error) {

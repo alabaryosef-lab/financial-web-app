@@ -254,16 +254,29 @@ export async function POST(
       [chatId]
     );
 
-    // Notify other participants (in-app + FCM) with EN/AR so each sees their language
+    // Notify: other participants; for customer_employee chats also notify all employees
     const [participants] = await pool.query(
       `SELECT user_id FROM chat_participants WHERE chat_id = ?`,
       [chatId]
     ) as any[];
-    const recipientIds = (participants || []).map((p: { user_id: string }) => p.user_id).filter((id: string) => id !== senderId);
+    const [chatRow] = await pool.query(`SELECT type FROM chats WHERE id = ?`, [chatId]) as any[];
+    const chatType = chatRow?.[0]?.type;
+    const recipientSet = new Set<string>(
+      (participants || []).map((p: { user_id: string }) => p.user_id).filter((id: string) => id !== senderId)
+    );
+    if (chatType === 'customer_employee') {
+      const [empRows] = await pool.query(
+        `SELECT id FROM users WHERE role = 'employee' AND is_active = TRUE`,
+        []
+      ) as any[];
+      (empRows || []).forEach((r: { id: string }) => {
+        if (r.id !== senderId) recipientSet.add(r.id);
+      });
+    }
     const titleEn = `New message from ${senderNameEn}`;
     const titleAr = `رسالة جديدة من ${senderNameAr}`;
     const msgPreview = (s: string) => (s.length > 100 ? s.slice(0, 97) + '...' : s);
-    for (const recipientId of recipientIds) {
+    for (const recipientId of recipientSet) {
       await createNotificationAndPush(
         recipientId,
         titleEn,

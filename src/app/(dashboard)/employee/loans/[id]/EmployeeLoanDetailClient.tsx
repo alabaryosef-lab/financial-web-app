@@ -54,7 +54,7 @@ export function EmployeeLoanDetailClient() {
 
   const fetchLoan = async () => {
     try {
-      const response = await fetch(`/api/loans/${loanId}?locale=${locale}`);
+      const response = await fetch(`/api/loans/${loanId}?locale=${locale}${user?.id ? `&userId=${encodeURIComponent(user.id)}` : ''}`);
       const data = await response.json();
       if (data.success && data.data.employeeId === user?.id) {
         setLoan(data.data);
@@ -78,7 +78,7 @@ export function EmployeeLoanDetailClient() {
 
   const fetchCustomer = async (customerId: string) => {
     try {
-      const response = await fetch(`/api/customers/${customerId}`);
+      const response = await fetch(`/api/customers/${customerId}${user?.id ? `?userId=${encodeURIComponent(user.id)}` : ''}`);
       const data = await response.json();
       if (data.success) {
         setCustomer(data.data);

@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Badge } from '@/components/ui/Badge';
 import { Loader } from '@/components/ui/Loader';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -525,48 +526,44 @@ export default function LoansPage() {
             <>
               <div>
                 <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('form.customer')}</label>
-                <select
+                <SearchableSelect
+                  options={customers.map((c) => ({
+                    id: c.id,
+                    label: c.name,
+                    sublabel: c.email,
+                  }))}
                   value={formData.customerId}
-                  onChange={(e) => {
-                    setFormData({ ...formData, customerId: e.target.value });
+                  onChange={(id) => {
+                    setFormData({ ...formData, customerId: id });
                     if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: '' });
                   }}
-                  className={`w-full h-12 px-4 rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${
-                    formErrors.customerId ? 'border-error' : 'border-neutral-200'
-                  }`}
+                  placeholder={t('form.selectCustomer')}
+                  error={!!formErrors.customerId}
                   required
-                >
-                  <option value="">{t('form.selectCustomer')}</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
+                  aria-label={t('form.customer')}
+                />
                 {formErrors.customerId && (
                   <p className="mt-2 text-sm text-error">{formErrors.customerId}</p>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('form.employee')}</label>
-                <select
+                <SearchableSelect
+                  options={employees.map((e) => ({
+                    id: e.id,
+                    label: e.name,
+                    sublabel: e.email,
+                  }))}
                   value={formData.employeeId}
-                  onChange={(e) => {
-                    setFormData({ ...formData, employeeId: e.target.value });
+                  onChange={(id) => {
+                    setFormData({ ...formData, employeeId: id });
                     if (formErrors.employeeId) setFormErrors({ ...formErrors, employeeId: '' });
                   }}
-                  className={`w-full h-12 px-4 rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${
-                    formErrors.employeeId ? 'border-error' : 'border-neutral-200'
-                  }`}
+                  placeholder={t('form.selectEmployee')}
+                  error={!!formErrors.employeeId}
                   required
-                >
-                  <option value="">{t('form.selectEmployee')}</option>
-                  {employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
+                  aria-label={t('form.employee')}
+                />
                 {formErrors.employeeId && (
                   <p className="mt-2 text-sm text-error">{formErrors.employeeId}</p>
                 )}

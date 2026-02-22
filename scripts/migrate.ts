@@ -206,6 +206,40 @@ async function migrate() {
     } catch (e: any) {
       if (e.code !== 'ER_DUP_KEY' && e.code !== 'ER_CANNOT_ADD_FOREIGN') throw e;
     }
+    try {
+      await connection.query(`ALTER TABLE chats ADD COLUMN loan_id VARCHAR(255) NULL`);
+    } catch (e: any) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
+    try {
+      await connection.query(`ALTER TABLE chats ADD INDEX idx_loan_id (loan_id)`);
+    } catch (e: any) {
+      if (e.code !== 'ER_DUP_KEYNAME') throw e;
+    }
+    try {
+      await connection.query(`ALTER TABLE chats ADD FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE SET NULL`);
+    } catch (e: any) {
+      if (e.code !== 'ER_DUP_KEY' && e.code !== 'ER_CANNOT_ADD_FOREIGN') throw e;
+    }
+
+    // Create loan_employees table (many employees per loan for unified chat)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS loan_employees (
+        loan_id VARCHAR(255) NOT NULL,
+        employee_id VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (loan_id, employee_id),
+        FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE,
+        FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_loan_id (loan_id),
+        INDEX idx_employee_id (employee_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    // Backfill loan_employees from loans.employee_id
+    await connection.query(`
+      INSERT IGNORE INTO loan_employees (loan_id, employee_id)
+      SELECT id, employee_id FROM loans
+    `);
 
     // Create chat_participants table
     await connection.query(`

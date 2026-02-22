@@ -7,6 +7,7 @@ import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Loader } from '@/components/ui/Loader';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { Chat, ChatMessage } from '@/types';
 import type { Customer } from '@/types';
 
@@ -14,12 +15,14 @@ export default function EmployeeChatPage() {
   const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
+  const { refreshNotifications } = useNotifications();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [assignedCustomers, setAssignedCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [startingChat, setStartingChat] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
 
   useEffect(() => {
     if (user?.id) {
@@ -74,8 +77,10 @@ export default function EmployeeChatPage() {
       const response = await fetch(`/api/chat/${chatId}/messages?locale=${locale}&userId=${user.id}`);
       const data = await response.json();
       if (data.success) {
-        setMessages(data.data);
-        // Mark chat as read when messages are fetched
+        const newList = data.data as ChatMessage[];
+        const newFromOther = messages.length > 0 && newList.length > messages.length && newList[newList.length - 1]?.senderId !== user?.id;
+        setMessages(newList);
+        if (newFromOther) refreshNotifications();
         markChatAsRead(chatId);
       }
     } catch (error) {
@@ -115,6 +120,23 @@ export default function EmployeeChatPage() {
   }, [selectedChat, locale]);
 
   const selectedChatData = chats.find(c => c.id === selectedChat);
+
+  const chatSearchLower = chatSearchQuery.trim().toLowerCase();
+  const filteredChats =
+    chatSearchLower === ''
+      ? chats
+      : chats.filter((chat) => {
+          if (chat.type === 'internal_room') {
+            return (chat.roomName ?? '').toLowerCase().includes(chatSearchLower);
+          }
+          const namesMatch = (chat.participantNames ?? []).some((n) =>
+            n.toLowerCase().includes(chatSearchLower)
+          );
+          const idsMatch = (chat.participantIds ?? []).some((id) =>
+            id.toLowerCase().includes(chatSearchLower)
+          );
+          return namesMatch || idsMatch;
+        });
 
   const roomNameKey: Record<string, string> = {
     'Contracts': 'chat.room.contracts',
@@ -209,8 +231,16 @@ export default function EmployeeChatPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card variant="elevated" padding="none" className="lg:col-span-1">
-          <div className="p-3 sm:p-4 border-b border-neutral-100">
+          <div className="p-3 sm:p-4 border-b border-neutral-100 space-y-3">
             <h2 className="font-semibold text-neutral-900 text-base sm:text-lg">{t('chat.chats')}</h2>
+            <input
+              type="search"
+              value={chatSearchQuery}
+              onChange={(e) => setChatSearchQuery(e.target.value)}
+              placeholder={t('chat.searchCustomerConversation')}
+              className="w-full min-h-[44px] rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              aria-label={t('chat.searchCustomerConversation')}
+            />
             {assignedCustomers.length > 0 && (
               <div className="mt-3">
                 <label htmlFor="customer-select" className="sr-only">
@@ -240,12 +270,12 @@ export default function EmployeeChatPage() {
             )}
           </div>
           <div className="divide-y divide-neutral-100">
-            {chats.length === 0 ? (
+            {filteredChats.length === 0 ? (
               <div className="p-4 text-center text-neutral-500">
-                <p>{t('chat.noChats')}</p>
+                <p>{chats.length === 0 ? t('chat.noChats') : t('chat.noMatches')}</p>
               </div>
             ) : (
-              chats.map((chat) => (
+              filteredChats.map((chat) => (
                 <button
                   key={chat.id}
                   type="button"

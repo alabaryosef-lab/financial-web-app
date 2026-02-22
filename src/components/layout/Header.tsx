@@ -26,7 +26,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, requestNotificationPermission } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -135,7 +135,13 @@ export function Header({ onMenuClick }: HeaderProps) {
             <div className="relative" ref={notifRef}>
               <button
                 type="button"
-                onClick={() => { setShowNotifications((v) => !v); setShowLanguageMenu(false); }}
+                onClick={() => {
+                  setShowNotifications((v) => !v);
+                  setShowLanguageMenu(false);
+                  if ('Notification' in window && Notification.permission === 'default') {
+                    requestNotificationPermission();
+                  }
+                }}
                 className="relative flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-[48px] sm:min-h-[48px] hover:bg-neutral-100 rounded-lg transition-colors"
                 aria-label={t('common.notificationsAria')}
               >

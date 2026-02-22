@@ -30,6 +30,8 @@ export interface Loan {
   id: string;
   customerId: string;
   employeeId: string;
+  /** All employee ids on this loan (from loan_employees); used for unified chat */
+  employeeIds?: string[];
   amount: number;
   interestRate: number;
   numberOfInstallments: number;
@@ -67,7 +69,7 @@ export interface ChatMessage {
 export interface Chat {
   id: string;
   type: 'customer_employee' | 'internal_room';
-  participantIds?: string[];
+  participantIds?: string[]; // Other participants' user ids (for search)
   participantNames?: string[]; // Names of other participants (excluding current user)
   roomName?: string; // For internal rooms
   isPinned?: boolean;

@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Badge } from '@/components/ui/Badge';
 import { Loader } from '@/components/ui/Loader';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -455,22 +456,22 @@ export default function EmployeeLoansPage() {
           {!editingLoan && (
             <div>
               <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('form.customer')}</label>
-              <select
+              <SearchableSelect
+                options={customers.map((c) => ({
+                  id: c.id,
+                  label: c.name,
+                  sublabel: c.email,
+                }))}
                 value={formData.customerId}
-                onChange={(e) => {
-                  setFormData({ ...formData, customerId: e.target.value });
+                onChange={(id) => {
+                  setFormData({ ...formData, customerId: id });
                   if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: '' });
                 }}
-                className={`w-full h-12 px-4 rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${
-                  formErrors.customerId ? 'border-error' : 'border-neutral-200'
-                }`}
+                placeholder={t('form.selectCustomer')}
+                error={!!formErrors.customerId}
                 required
-              >
-                <option value="">{t('form.selectCustomer')}</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                aria-label={t('form.customer')}
+              />
               {formErrors.customerId && (
                 <p className="mt-2 text-sm text-error">{formErrors.customerId}</p>
               )}

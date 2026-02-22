@@ -31,11 +31,21 @@ export function ChatWindow({ messages, onSendMessage, title, chatId, readOnly, o
   const [deleteConfirmMessageId, setDeleteConfirmMessageId] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
+  const pasteCursorRef = useRef<number | null>(null);
   const prevLastMessageIdRef = useRef<string | null>(null);
   const isUserScrollingRef = useRef<boolean>(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
   const { t, locale } = useLocale();
+
+  useEffect(() => {
+    if (pasteCursorRef.current !== null && messageInputRef.current) {
+      const pos = pasteCursorRef.current;
+      messageInputRef.current.setSelectionRange(pos, pos);
+      pasteCursorRef.current = null;
+    }
+  }, [inputValue]);
 
   // Track user scroll to prevent auto-scroll when user scrolls up
   useEffect(() => {
@@ -393,8 +403,20 @@ export function ChatWindow({ messages, onSendMessage, title, chatId, readOnly, o
             <Paperclip className="w-5 h-5 text-neutral-600" />
           </label>
           <Input
+            ref={messageInputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            onPaste={(e) => {
+              e.preventDefault();
+              const plain = e.clipboardData.getData('text/plain');
+              const input = messageInputRef.current;
+              if (!input) return;
+              const start = input.selectionStart ?? input.value.length;
+              const end = input.selectionEnd ?? input.value.length;
+              const newVal = input.value.slice(0, start) + plain + input.value.slice(end);
+              pasteCursorRef.current = start + plain.length;
+              setInputValue(newVal);
+            }}
             onKeyPress={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

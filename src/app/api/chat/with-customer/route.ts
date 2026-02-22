@@ -26,13 +26,39 @@ export async function POST(request: NextRequest) {
       return errorResponse('Customer is not assigned to this employee', 403, 'chat.customerNotAssigned');
     }
 
-    // Find existing customer_employee chat
+    // Prefer unified loan chat: if there is a loan for this customer that includes this employee, use that chat
+    const [loanChat] = await pool.query(
+      `SELECT c.id FROM chats c
+       INNER JOIN chat_participants cp_c ON c.id = cp_c.chat_id AND cp_c.user_id = ?
+       INNER JOIN chat_participants cp_e ON c.id = cp_e.chat_id AND cp_e.user_id = ?
+       WHERE c.type = 'customer_employee' AND c.loan_id IS NOT NULL
+       LIMIT 1`,
+      [customerId, employeeId]
+    ) as any[];
+    if (loanChat.length > 0) {
+      const [chatRow] = await pool.query(
+        `SELECT id, type, room_name, created_at, updated_at FROM chats WHERE id = ?`,
+        [loanChat[0].id]
+      ) as any[];
+      const c = chatRow[0];
+      return successResponse({
+        id: c.id,
+        type: c.type,
+        roomName: c.room_name,
+        lastMessage: undefined,
+        unreadCount: 0,
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+      });
+    }
+
+    // Find existing customer_employee chat (non-loan)
     const [existing] = await pool.query(
       `SELECT c.id
        FROM chats c
        INNER JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = ?
        INNER JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = ?
-       WHERE c.type = 'customer_employee'`,
+       WHERE c.type = 'customer_employee' AND (c.loan_id IS NULL OR c.loan_id = '')`,
       [employeeId, customerId]
     ) as any[];
 
