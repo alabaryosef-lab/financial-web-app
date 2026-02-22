@@ -45,8 +45,16 @@ export function EmployeeCustomerDetailClient() {
     try {
       const response = await fetch(`/api/customers/${customerId}${user?.id ? `?userId=${encodeURIComponent(user.id)}` : ''}`);
       const data = await response.json();
-      if (data.success && data.data.assignedEmployeeId === user?.id) {
-        setCustomer(data.data);
+      if (!data.success || !data.data) {
+        setLoading(false);
+        return;
+      }
+      const d = data.data;
+      const isAssigned =
+        d.assignedEmployeeId === user?.id ||
+        (Array.isArray(d.assignedEmployeeIds) && d.assignedEmployeeIds.includes(user?.id));
+      if (isAssigned) {
+        setCustomer(d);
       }
     } catch (error) {
       console.error('Failed to fetch customer:', error);

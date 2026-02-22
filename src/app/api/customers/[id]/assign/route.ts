@@ -9,8 +9,9 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { employeeId, employeeIds: rawEmployeeIds } = body;
+    const { employeeId, employeeIds: rawEmployeeIds, requestedByUserId } = body;
     const customerId = params.id;
+    const requestedBy = requestedByUserId || request.nextUrl.searchParams.get('userId');
 
     const employeeIds = Array.isArray(rawEmployeeIds)
       ? rawEmployeeIds.filter((id: string) => id && typeof id === 'string')
@@ -18,6 +19,15 @@ export async function POST(
 
     if (employeeIds.length === 0) {
       return errorResponse('Employee ID or employeeIds array is required', 400, 'error.employeeIdRequired');
+    }
+
+    if (requestedBy) {
+      const [requester] = await pool.query('SELECT id, role FROM users WHERE id = ?', [requestedBy]) as any[];
+      if (requester.length > 0 && requester[0].role === 'employee') {
+        if (employeeIds.length !== 1 || employeeIds[0] !== requestedBy) {
+          return errorResponse('Employee can only assign themselves to a customer', 403, 'error.accessDenied');
+        }
+      }
     }
 
     const [customers] = await pool.query('SELECT id FROM customers WHERE id = ?', [customerId]) as any[];

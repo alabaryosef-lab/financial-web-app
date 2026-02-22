@@ -284,6 +284,7 @@ export default function EmployeeLoansPage() {
           body: JSON.stringify({
             customerId: formData.customerId,
             employeeId: user?.id,
+            requestedByUserId: user?.id,
             amount: amountNum,
             interestRate: interestRateNum,
             numberOfInstallments: numberOfInstallmentsNum,

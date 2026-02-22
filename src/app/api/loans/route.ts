@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
       customerId,
       employeeId: bodyEmployeeId,
       employeeIds: rawEmployeeIds,
+      requestedByUserId,
       amount,
       interestRate,
       numberOfInstallments,
@@ -101,6 +102,13 @@ export async function POST(request: NextRequest) {
       status,
       notes,
     } = body;
+
+    const requestedBy = requestedByUserId || request.nextUrl.searchParams.get('userId');
+    let isEmployeeRequest = false;
+    if (requestedBy) {
+      const [ur] = await pool.query('SELECT role FROM users WHERE id = ?', [requestedBy]) as any[];
+      if (ur.length > 0 && ur[0].role === 'employee') isEmployeeRequest = true;
+    }
 
     const employeeIdsArray = Array.isArray(rawEmployeeIds) && rawEmployeeIds.length > 0
       ? rawEmployeeIds.filter((id: string) => id && typeof id === 'string')
@@ -240,7 +248,7 @@ export async function POST(request: NextRequest) {
         [loanChatId, customerId]
       );
 
-      if (!employeeIdsArray) {
+      if (!employeeIdsArray && !isEmployeeRequest) {
         const [assignRows] = await connection.query(
           'SELECT employee_id FROM employee_customer_assignments WHERE customer_id = ?',
           [customerId]
