@@ -3,15 +3,15 @@
 import React, { useState } from 'react';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { ArrowLeft, Edit, Mail, Phone, MapPin, UserCheck, FileText, UserPlus, X, Trash2, UserX } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Modal } from '@/components/ui/Modal';
-import { Input } from '@/components/ui/Input';
-import { Loader } from '@/components/ui/Loader';
-import { useLocale } from '@/contexts/LocaleContext';
-import { Customer } from '@/types';
-import { getLoanStatusColor, formatDate, formatDateOnly, formatCurrency, formatNumber, formatPercent } from '@/lib/utils';
+import { Card } from '../../../../../components/ui/Card';
+import { Button } from '../../../../../components/ui/Button';
+import { Badge } from '../../../../../components/ui/Badge';
+import { Modal } from '../../../../../components/ui/Modal';
+import { Input } from '../../../../../components/ui/Input';
+import { Loader } from '../../../../../components/ui/Loader';
+import { useLocale } from '../../../../../contexts/LocaleContext';
+import { Customer } from '../../../../../types';
+import { getLoanStatusColor, formatDate, formatDateOnly, formatCurrency, formatNumber, formatPercent } from '../../../../../lib/utils';
 
 export function CustomerDetailClient() {
   const params = useParams();

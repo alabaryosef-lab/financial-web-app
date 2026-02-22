@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { errorResponse, notFoundError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,28 +10,20 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ filename: string }> | { filename: string } }
+  context: { params: Promise<{ filename: string }> }
 ) {
   try {
-    // Handle both sync and async params (Next.js 13+)
-    const resolvedParams = await Promise.resolve(params);
-    const filename = resolvedParams.filename;
-    
+    const { filename } = await context.params;
     if (!filename) {
-      return errorResponse('Filename is required', 400, 'error.invalidFilename');
+      return NextResponse.json({ success: false, error: 'Filename is required' }, { status: 400 });
     }
-    
-    // Security: prevent directory traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return errorResponse('Invalid filename', 400, 'error.invalidFilename');
+      return NextResponse.json({ success: false, error: 'Invalid filename' }, { status: 400 });
     }
 
     const filePath = path.join(process.cwd(), 'public', 'assets', filename);
-    
     try {
       const fileBuffer = await readFile(filePath);
-      
-      // Determine content type from extension
       const ext = path.extname(filename).toLowerCase();
       const contentTypeMap: Record<string, string> = {
         '.jpg': 'image/jpeg',
@@ -44,7 +35,6 @@ export async function GET(
         '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       };
       const contentType = contentTypeMap[ext] || 'application/octet-stream';
-
       return new NextResponse(fileBuffer, {
         headers: {
           'Content-Type': contentType,
@@ -52,15 +42,16 @@ export async function GET(
           'Cache-Control': 'public, max-age=31536000, immutable',
         },
       });
-    } catch (error: any) {
-      console.error('File read error:', error?.code, error?.message, filePath);
-      if (error.code === 'ENOENT') {
-        return notFoundError('File');
-      }
-      throw error;
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException)?.code;
+      if (code === 'ENOENT') return NextResponse.json({ success: false, error: 'File not found' }, { status: 404 });
+      throw err;
     }
-  } catch (error: any) {
-    console.error('File serve error:', error?.code, error?.message, error?.stack);
-    return errorResponse(`Failed to serve file: ${error?.message || 'Unknown error'}`, 500, 'error.fileServeError');
+  } catch (err) {
+    console.error('File serve error:', err);
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
