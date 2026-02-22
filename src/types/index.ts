@@ -32,7 +32,7 @@ export interface Loan {
   id: string;
   customerId: string;
   employeeId: string;
-  /** All employee ids on this loan (from loan_employees); used for unified chat */
+  /** Assigned employees on this loan = team in this loan's chat (single list from loan_employees) */
   employeeIds?: string[];
   amount: number;
   interestRate: number;

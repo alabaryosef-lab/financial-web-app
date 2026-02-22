@@ -4,7 +4,7 @@ import { successResponse, errorResponse, notFoundError, serverError, validationE
 
 export const dynamic = 'force-dynamic';
 
-/** GET: list employee ids assigned to this loan (from loan_employees, fallback to loans.employee_id) */
+/** GET: list employees on this loan (= loan chat team; single source of truth: loan_employees) */
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -32,7 +32,7 @@ export async function GET(
   }
 }
 
-/** POST: add an employee to the loan and to the loan chat */
+/** POST: add an employee to the loan (and to the loan chat — same list) */
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -101,7 +101,7 @@ export async function POST(
   }
 }
 
-/** PUT: set full list of employees on the loan; syncs loan_employees and loan chat participants */
+/** PUT: set full list (assigned employees = chat team); syncs loan_employees and chat participants */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -185,7 +185,7 @@ export async function PUT(
   }
 }
 
-/** DELETE: remove an employee from the loan and from the loan chat (chat is not deleted) */
+/** DELETE: remove an employee from the loan (and from the loan chat — same list) */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
