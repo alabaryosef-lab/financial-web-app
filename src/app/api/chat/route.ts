@@ -35,26 +35,16 @@ export async function GET(request: NextRequest) {
       ) as any[];
       rows = all;
     } else if (role === 'customer') {
-      // Customer: only the 1:1 chat with their assigned employee
-      const [cust] = await pool.query(
-        `SELECT assigned_employee_id FROM customers WHERE id = ?`,
+      // Customer: unified chat(s) where they are a participant (one per customer, type customer_employee, no loan_id)
+      const [chats] = await pool.query(
+        `SELECT DISTINCT c.*
+         FROM chats c
+         INNER JOIN chat_participants cp ON c.id = cp.chat_id AND cp.user_id = ?
+         WHERE c.type = 'customer_employee' AND (c.loan_id IS NULL OR c.loan_id = '')
+         ORDER BY COALESCE(c.is_pinned, 0) DESC, c.updated_at DESC`,
         [userId]
       ) as any[];
-      const assignedEmployeeId = cust.length > 0 ? cust[0].assigned_employee_id : null;
-      if (!assignedEmployeeId) {
-        rows = [];
-      } else {
-        const [chats] = await pool.query(
-          `SELECT DISTINCT c.*
-           FROM chats c
-           INNER JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = ?
-           INNER JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = ?
-           WHERE c.type = 'customer_employee'
-           ORDER BY c.updated_at DESC`,
-          [userId, assignedEmployeeId]
-        ) as any[];
-        rows = chats;
-      }
+      rows = chats || [];
     } else {
       // Employee: only unified customer_employee chats (no internal rooms, no other chat types)
       let customerChats: any[];

@@ -279,7 +279,7 @@ export function CustomerDetailClient() {
   };
 
   const handleDelete = async () => {
-    if (!customer || customerLoans.length > 0) return;
+    if (!customer) return;
     setDeleteError('');
     setActionLoading(true);
     try {
@@ -611,21 +611,18 @@ export function CustomerDetailClient() {
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={actionLoading}>
               {t('common.cancel')}
             </Button>
-            <Button variant="primary" onClick={handleDelete} disabled={actionLoading || customerLoans.length > 0} className="bg-error hover:bg-error/90">
+            <Button variant="primary" onClick={handleDelete} disabled={actionLoading} className="bg-error hover:bg-error/90">
               {actionLoading ? t('common.loading') + '...' : t('common.delete')}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          {customerLoans.length > 0 && (
-            <p className="text-error text-sm font-medium">{t('error.customerHasLoans')}</p>
-          )}
           {deleteError && (
             <p className="text-error text-sm">{deleteError}</p>
           )}
           <p className="text-neutral-700">{t('page.deleteCustomerConfirm')}</p>
-          <p className="text-neutral-600 text-sm">{t('page.deleteCustomerChatAlsoDeleted')}</p>
+          <p className="text-neutral-600 text-sm">{t('page.deleteCustomerUnassignAndDelete')}</p>
         </div>
       </Modal>
 

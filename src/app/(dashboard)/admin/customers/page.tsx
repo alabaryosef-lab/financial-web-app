@@ -555,7 +555,7 @@ export default function CustomersPage() {
         <div className="space-y-3">
           {submitError && <p className="text-error text-sm">{submitError}</p>}
           <p className="text-neutral-700">{t('page.deleteCustomerConfirm')}</p>
-          <p className="text-neutral-600 text-sm">{t('page.deleteCustomerChatAlsoDeleted')}</p>
+          <p className="text-neutral-600 text-sm">{t('page.deleteCustomerUnassignAndDelete')}</p>
         </div>
       </Modal>
 

@@ -231,22 +231,11 @@ export async function DELETE(
       return notFoundError('Customer');
     }
 
-    const [loans] = await pool.query(
-      'SELECT id FROM loans WHERE customer_id = ?',
-      [params.id]
-    ) as any[];
-    if (loans.length > 0) {
-      return errorResponse(
-        'Customer cannot be deleted. Delete all loans first.',
-        400,
-        'error.customerHasLoans'
-      );
-    }
-
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
+      // 1. Unassign all employees from this customer
       await connection.query(
         'DELETE FROM employee_customer_assignments WHERE customer_id = ?',
         [params.id]
@@ -255,6 +244,24 @@ export async function DELETE(
         'UPDATE customers SET assigned_employee_id = NULL WHERE id = ?',
         [params.id]
       );
+
+      // 2. Delete all loans (translations, loan_employees, then loans)
+      const [loanRows] = await connection.query(
+        'SELECT id FROM loans WHERE customer_id = ?',
+        [params.id]
+      ) as any[];
+      const loanIds = loanRows.map((r: any) => r.id);
+      for (const loanId of loanIds) {
+        await connection.query('DELETE FROM loan_translations WHERE loan_id = ?', [loanId]);
+        try {
+          await connection.query('DELETE FROM loan_employees WHERE loan_id = ?', [loanId]);
+        } catch (_) {
+          // loan_employees table may not exist
+        }
+      }
+      await connection.query('DELETE FROM loans WHERE customer_id = ?', [params.id]);
+
+      // 3. Delete all unified chats (read status, messages, participants, chats)
       const [customerChats] = await connection.query(
         'SELECT chat_id FROM chat_participants WHERE user_id = ?',
         [params.id]
@@ -266,18 +273,11 @@ export async function DELETE(
         await connection.query('DELETE FROM chat_participants WHERE chat_id = ?', [chatId]);
         await connection.query('DELETE FROM chats WHERE id = ?', [chatId]);
       }
-      try {
-        await connection.query(
-          'UPDATE users SET is_deleted = TRUE, deleted_at = NOW(), is_active = FALSE WHERE id = ?',
-          [params.id]
-        );
-      } catch (e: any) {
-        if (e?.code === 'ER_BAD_FIELD_ERROR' && e?.message?.includes('is_deleted')) {
-          await connection.query('UPDATE users SET is_active = FALSE WHERE id = ?', [params.id]);
-        } else {
-          throw e;
-        }
-      }
+
+      // 4. Hard delete customer and user (no archive)
+      await connection.query('DELETE FROM customers WHERE id = ?', [params.id]);
+      await connection.query('DELETE FROM users WHERE id = ?', [params.id]);
+
       await connection.commit();
       return successResponse({}, 'Customer deleted successfully', 'error.customerDeletedSuccessfully');
     } catch (error) {
