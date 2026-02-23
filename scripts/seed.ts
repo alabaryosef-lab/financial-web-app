@@ -1,5 +1,6 @@
 /**
- * Full database seed: admin, employees, customers, assignments, loans, internal chat rooms.
+ * Full database seed: admin, employees, customers, assignments, loans,
+ * unified customer chats (customer + admins + assigned employees), internal chat rooms.
  * Run after migrate: npm run db:migrate && npm run db:seed
  */
 
@@ -12,6 +13,7 @@ async function seed() {
   const { default: pool } = await import('../src/lib/db');
   const { hashPassword } = await import('../src/lib/auth');
   const { saveUserNameTranslations, saveLoanNotesTranslations } = await import('../src/lib/translations');
+  const { syncCustomerUnifiedChat } = await import('../src/lib/customer-chat');
 
   const connection = await pool.getConnection();
 
@@ -27,8 +29,8 @@ async function seed() {
         `INSERT INTO users (id, email, password_hash, role, is_active) VALUES (?, ?, ?, 'admin', TRUE)`,
         [adminId, adminEmail, passwordHash]
       );
-      await saveUserNameTranslations(adminId, 'Khalijtamweel', 'خليج تمويل');
-      console.log('Admin created:', adminEmail, '/', adminPassword);
+      await saveUserNameTranslations(adminId, 'Alkhalij for Finance', 'الخليج للتمويل');
+      console.log('Admin created:', adminEmail);
     } else {
       console.log('Admin already exists:', adminEmail);
     }
@@ -90,6 +92,15 @@ async function seed() {
     );
     console.log('Assignments set');
 
+    // --- Unified customer chats (one per customer: customer + admins + assigned employees) ---
+    for (const c of customers) {
+      const [ex] = await connection.query('SELECT id FROM users WHERE id = ?', [c.id]) as any[];
+      if (ex.length > 0) {
+        await syncCustomerUnifiedChat(c.id);
+      }
+    }
+    console.log('Unified customer chats synced');
+
     // --- Loans ---
     const loans = [
       { id: 'loan-1', customerId: 'customer-1', employeeId: 'employee-1', amount: 50000, rate: 5, installments: 12, startDate: '2024-01-15', status: 'active', notesEn: 'Monthly payment plan', notesAr: 'خطة الدفع الشهرية' },
@@ -131,7 +142,8 @@ async function seed() {
       }
     }
 
-    console.log('\nSeed completed. Admin login: admin@demo.com / admin123');
+    const adminEmailFinal = process.env.ADMIN_EMAIL || 'admin@khalijtamweel.com';
+    console.log('\nSeed completed. Admin login:', adminEmailFinal, '(password from ADMIN_PASSWORD)');
   } catch (error) {
     console.error('Seed failed:', error);
     throw error;
