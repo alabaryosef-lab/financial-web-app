@@ -121,14 +121,13 @@ export default function EmployeeChatPage() {
 
   const selectedChatData = chats.find(c => c.id === selectedChat);
 
+  // Employees only have unified customer chats (customer_employee, no loan_id)
+  const unifiedChats = chats.filter((c) => c.type === 'customer_employee');
   const chatSearchLower = chatSearchQuery.trim().toLowerCase();
   const filteredChats =
     chatSearchLower === ''
-      ? chats
-      : chats.filter((chat) => {
-          if (chat.type === 'internal_room') {
-            return (chat.roomName ?? '').toLowerCase().includes(chatSearchLower);
-          }
+      ? unifiedChats
+      : unifiedChats.filter((chat) => {
           const namesMatch = (chat.participantNames ?? []).some((n) =>
             n.toLowerCase().includes(chatSearchLower)
           );
@@ -137,14 +136,6 @@ export default function EmployeeChatPage() {
           );
           return namesMatch || idsMatch;
         });
-
-  const roomNameKey: Record<string, string> = {
-    'Contracts': 'chat.room.contracts',
-    'Follow Up': 'chat.room.followUp',
-    'Receipts': 'chat.room.receipts',
-  };
-  const translateRoomName = (name: string | undefined) =>
-    (name && roomNameKey[name] ? t(roomNameKey[name]) : name) || '';
 
   const handleStartChatWithCustomer = async (customerId: string) => {
     if (!user?.id) return;
@@ -289,9 +280,7 @@ export default function EmployeeChatPage() {
                 >
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-neutral-900">
-                      {chat.type === 'internal_room'
-                        ? translateRoomName(chat.roomName)
-                        : chat.participantNames && chat.participantNames.length > 0
+                      {chat.participantNames && chat.participantNames.length > 0
                         ? chat.participantNames.join(', ')
                         : t('chat.customerChat')}
                     </p>
@@ -357,9 +346,7 @@ export default function EmployeeChatPage() {
                 }
               }}
               title={
-                selectedChatData.type === 'internal_room'
-                  ? translateRoomName(selectedChatData.roomName)
-                  : selectedChatData.participantNames && selectedChatData.participantNames.length > 0
+                selectedChatData.participantNames && selectedChatData.participantNames.length > 0
                   ? selectedChatData.participantNames.join(', ')
                   : t('chat.customerChat')
               }

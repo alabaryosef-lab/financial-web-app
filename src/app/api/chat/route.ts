@@ -56,15 +56,7 @@ export async function GET(request: NextRequest) {
         rows = chats;
       }
     } else {
-      // Employee: customer_employee chats with assigned customers only + internal_room chats they're in
-      const [internal] = await pool.query(
-        `SELECT c.* FROM chats c
-         INNER JOIN chat_participants cp ON c.id = cp.chat_id AND cp.user_id = ?
-         WHERE c.type = 'internal_room'
-         ORDER BY c.updated_at DESC`,
-        [userId]
-      ) as any[];
-      // Only show customer_employee chats where the customer is not deleted/blocked
+      // Employee: only unified customer_employee chats (no internal rooms, no other chat types)
       let customerChats: any[];
       try {
         [customerChats] = await pool.query(
@@ -75,8 +67,8 @@ export async function GET(request: NextRequest) {
            INNER JOIN users cust_user ON cust_user.id = cp2.user_id AND cust_user.role = 'customer'
              AND (cust_user.is_deleted = FALSE OR cust_user.is_deleted IS NULL) AND cust_user.is_active = TRUE
            INNER JOIN employee_customer_assignments eca ON eca.employee_id = ? AND eca.customer_id = cp2.user_id
-           WHERE c.type = 'customer_employee'
-           ORDER BY c.updated_at DESC`,
+           WHERE c.type = 'customer_employee' AND (c.loan_id IS NULL OR c.loan_id = '')
+           ORDER BY COALESCE(c.is_pinned, 0) DESC, c.updated_at DESC`,
           [userId, userId, userId]
         ) as any[];
       } catch (e: any) {
@@ -88,22 +80,15 @@ export async function GET(request: NextRequest) {
              INNER JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id != ?
              INNER JOIN users cust_user ON cust_user.id = cp2.user_id AND cust_user.role = 'customer' AND cust_user.is_active = TRUE
              INNER JOIN employee_customer_assignments eca ON eca.employee_id = ? AND eca.customer_id = cp2.user_id
-             WHERE c.type = 'customer_employee'
-             ORDER BY c.updated_at DESC`,
+             WHERE c.type = 'customer_employee' AND (c.loan_id IS NULL OR c.loan_id = '')
+             ORDER BY COALESCE(c.is_pinned, 0) DESC, c.updated_at DESC`,
             [userId, userId, userId]
           ) as any[];
         } else {
           throw e;
         }
       }
-      // Merge and sort: pinned first, then by updated_at
-      const byId = new Map<string, any>();
-      [...customerChats, ...internal].forEach((r: any) => byId.set(r.id, r));
-      rows = Array.from(byId.values()).sort((a, b) => {
-        if (a.is_pinned && !b.is_pinned) return -1;
-        if (!a.is_pinned && b.is_pinned) return 1;
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      });
+      rows = customerChats || [];
     }
 
     // Get last message, unread count, and participant names for each chat
