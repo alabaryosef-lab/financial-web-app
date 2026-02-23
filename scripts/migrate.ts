@@ -360,13 +360,25 @@ async function migrate() {
         user_id VARCHAR(255) NOT NULL,
         type ENUM('info', 'success', 'warning', 'error') NOT NULL,
         is_read BOOLEAN DEFAULT FALSE,
+        reference_id VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         INDEX idx_user_id (user_id),
         INDEX idx_is_read (is_read),
-        INDEX idx_created_at (created_at)
+        INDEX idx_created_at (created_at),
+        INDEX idx_reference_id (reference_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    try {
+      await connection.query(`ALTER TABLE notifications ADD COLUMN reference_id VARCHAR(255) NULL`);
+    } catch (e: any) {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    }
+    try {
+      await connection.query(`ALTER TABLE notifications ADD INDEX idx_reference_id (reference_id)`);
+    } catch (e: any) {
+      if (e.code !== 'ER_DUP_KEYNAME') throw e;
+    }
 
     // Create notification_translations table
     await connection.query(`

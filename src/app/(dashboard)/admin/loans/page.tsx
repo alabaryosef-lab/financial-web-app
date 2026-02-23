@@ -29,7 +29,6 @@ export default function LoansPage() {
   const [formData, setFormData] = useState({
     customerId: '',
     employeeId: '',
-    loanEmployeeIds: [] as string[],
     amount: '',
     interestRate: '',
     numberOfInstallments: '',
@@ -165,9 +164,6 @@ export default function LoansPage() {
     if (!editingLoan) {
       if (!formData.customerId || formData.customerId.trim() === '') {
         errors.customerId = t('validation.customerRequired');
-      }
-      if (!formData.loanEmployeeIds || formData.loanEmployeeIds.length === 0) {
-        errors.loanEmployeeIds = t('validation.employeeRequired');
       }
     }
     
@@ -326,7 +322,6 @@ export default function LoansPage() {
         
         const loanData = {
           customerId: formData.customerId,
-          employeeIds: formData.loanEmployeeIds,
           amount: amountNum,
           interestRate: interestRateNum,
           numberOfInstallments: numberOfInstallmentsNum,
@@ -536,13 +531,8 @@ export default function LoansPage() {
                   }))}
                   value={formData.customerId}
                   onChange={(id) => {
-                    const cust = customers.find((c: any) => c.id === id);
-                    const ids = (cust?.assignedEmployeeIds && cust.assignedEmployeeIds.length > 0)
-                      ? [...cust.assignedEmployeeIds]
-                      : [];
-                    setFormData({ ...formData, customerId: id, loanEmployeeIds: ids });
+                    setFormData({ ...formData, customerId: id });
                     if (formErrors.customerId) setFormErrors({ ...formErrors, customerId: '' });
-                    if (formErrors.loanEmployeeIds) setFormErrors({ ...formErrors, loanEmployeeIds: '' });
                   }}
                   placeholder={t('form.selectCustomer')}
                   error={!!formErrors.customerId}
@@ -551,49 +541,6 @@ export default function LoansPage() {
                 />
                 {formErrors.customerId && (
                   <p className="mt-2 text-sm text-error">{formErrors.customerId}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-neutral-900 mb-2">{t('detail.assignedEmployeesOnLoan')}</label>
-                <p className="text-xs text-neutral-500 mb-2">First is primary. All are added to this loan&apos;s chat.</p>
-                {formData.loanEmployeeIds.length > 0 && (
-                  <ul className="space-y-1 mb-3">
-                    {formData.loanEmployeeIds.map((eid, idx) => {
-                      const emp = employees.find((e: any) => e.id === eid);
-                      return (
-                        <li key={eid} className="flex items-center justify-between p-2 rounded-lg bg-neutral-50">
-                          <span className="text-neutral-900">{emp ? emp.name : eid}{idx === 0 ? ' (Primary)' : ''}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = formData.loanEmployeeIds.filter((id) => id !== eid);
-                              setFormData({ ...formData, loanEmployeeIds: next });
-                              if (formErrors.loanEmployeeIds) setFormErrors({ ...formErrors, loanEmployeeIds: '' });
-                            }}
-                            className="p-1 hover:bg-neutral-200 rounded"
-                          >
-                            <X className="w-4 h-4 text-neutral-500" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                <SearchableSelect
-                  options={employees
-                    .filter((e: any) => !formData.loanEmployeeIds.includes(e.id))
-                    .map((e: any) => ({ id: e.id, label: e.name, sublabel: e.email }))}
-                  value=""
-                  onChange={(id) => {
-                    setFormData({ ...formData, loanEmployeeIds: [...formData.loanEmployeeIds, id] });
-                    if (formErrors.loanEmployeeIds) setFormErrors({ ...formErrors, loanEmployeeIds: '' });
-                  }}
-                  placeholder={t('detail.addEmployeeToLoan')}
-                  error={!!formErrors.loanEmployeeIds}
-                  aria-label={t('detail.addEmployeeToLoan')}
-                />
-                {formErrors.loanEmployeeIds && (
-                  <p className="mt-2 text-sm text-error">{formErrors.loanEmployeeIds}</p>
                 )}
               </div>
             </>

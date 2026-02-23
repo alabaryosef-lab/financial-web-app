@@ -90,7 +90,8 @@ export async function POST(
               'تم تعيين عميل جديد',
               `${customerNameEn} has been assigned to you`,
               `تم تعيين ${customerNameAr} لك`,
-              'info'
+              'info',
+              `assignment-${customerId}`
             );
           } catch (e) {
             console.error('[Assign] Notify employee error:', e);
@@ -116,7 +117,8 @@ export async function POST(
             notifyEmployeeIds.length > 1
               ? `تم تعيين ${notifyEmployeeIds.length} أعضاء الفريق كجهة اتصالك`
               : `تم تعيين ${employeeNameAr} كجهة اتصالك`,
-            'info'
+            'info',
+            `assignment-${customerId}`
           );
         } catch (e) {
           console.error('[Assign] Notify customer error:', e);

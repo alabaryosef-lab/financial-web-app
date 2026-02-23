@@ -245,12 +245,23 @@ export async function DELETE(
         [params.id]
       );
 
-      // 2. Delete all loans (translations, loan_employees, then loans)
+      // 2. Delete all loans (notifications, translations, loan_employees, then loans)
       const [loanRows] = await connection.query(
         'SELECT id FROM loans WHERE customer_id = ?',
         [params.id]
       ) as any[];
       const loanIds = loanRows.map((r: any) => r.id);
+      if (loanIds.length > 0) {
+        const loanPlaceholders = loanIds.map(() => '?').join(',');
+        await connection.query(
+          `DELETE FROM notifications WHERE reference_id IN (${loanPlaceholders})`,
+          loanIds
+        );
+      }
+      await connection.query(
+        'DELETE FROM notifications WHERE reference_id = ?',
+        [`assignment-${params.id}`]
+      );
       for (const loanId of loanIds) {
         await connection.query('DELETE FROM loan_translations WHERE loan_id = ?', [loanId]);
         try {
@@ -261,14 +272,25 @@ export async function DELETE(
       }
       await connection.query('DELETE FROM loans WHERE customer_id = ?', [params.id]);
 
-      // 3. Delete all unified chats (read status, messages, participants, chats)
+      // 3. Delete all unified chats (read status, messages, participants, chats) and chat-related notifications
       const [customerChats] = await connection.query(
         'SELECT chat_id FROM chat_participants WHERE user_id = ?',
         [params.id]
       ) as any[];
       const chatIds = customerChats.map((r: any) => r.chat_id);
+      if (chatIds.length > 0) {
+        const placeholders = chatIds.map(() => '?').join(',');
+        await connection.query(
+          `DELETE FROM notifications WHERE reference_id IN (${placeholders})`,
+          chatIds
+        );
+      }
       for (const chatId of chatIds) {
-        await connection.query('DELETE FROM chat_read_status WHERE chat_id = ?', [chatId]);
+        try {
+          await connection.query('DELETE FROM chat_read_status WHERE chat_id = ?', [chatId]);
+        } catch (_) {
+          // chat_read_status table may not exist
+        }
         await connection.query('DELETE FROM chat_messages WHERE chat_id = ?', [chatId]);
         await connection.query('DELETE FROM chat_participants WHERE chat_id = ?', [chatId]);
         await connection.query('DELETE FROM chats WHERE id = ?', [chatId]);

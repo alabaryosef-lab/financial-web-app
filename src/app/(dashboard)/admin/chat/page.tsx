@@ -32,6 +32,7 @@ export default function AdminChatPage() {
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirmChat, setDeleteConfirmChat] = useState<Chat | null>(null);
+  const [deleteRoomError, setDeleteRoomError] = useState('');
   const [createRoomError, setCreateRoomError] = useState('');
 
   useEffect(() => {
@@ -259,6 +260,8 @@ export default function AdminChatPage() {
         }
         await fetchChats();
         setDeleteConfirmChat(null);
+      } else if (data.errorKey) {
+        setDeleteRoomError(t(data.errorKey));
       }
     } catch (error) {
       console.error('Failed to delete room:', error);
@@ -413,17 +416,20 @@ export default function AdminChatPage() {
                           >
                             <PinOff className="w-4 h-4 text-primary-600" strokeWidth={2.5} />
                           </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmChat(chat);
-                            }}
-                            className="p-2 hover:bg-error-light rounded-lg transition-colors shrink-0"
-                            title={t('common.delete')}
-                          >
-                            <Trash2 className="w-4 h-4 text-error" />
-                          </button>
+                          {chat.type !== 'customer_employee' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteRoomError('');
+                                setDeleteConfirmChat(chat);
+                              }}
+                              className="p-2 hover:bg-error-light rounded-lg transition-colors shrink-0"
+                              title={t('common.delete')}
+                            >
+                              <Trash2 className="w-4 h-4 text-error" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -484,17 +490,20 @@ export default function AdminChatPage() {
                           >
                             <Pin className="w-4 h-4 text-primary-600" strokeWidth={2} />
                           </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmChat(chat);
-                            }}
-                            className="p-2 hover:bg-error-light rounded-lg transition-colors shrink-0"
-                            title={t('common.delete')}
-                          >
-                            <Trash2 className="w-4 h-4 text-error" />
-                          </button>
+                          {chat.type !== 'customer_employee' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteRoomError('');
+                                setDeleteConfirmChat(chat);
+                              }}
+                              className="p-2 hover:bg-error-light rounded-lg transition-colors shrink-0"
+                              title={t('common.delete')}
+                            >
+                              <Trash2 className="w-4 h-4 text-error" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -640,10 +649,13 @@ export default function AdminChatPage() {
       {/* Delete Room Confirmation Modal */}
       <Modal
         isOpen={deleteConfirmChat !== null}
-        onClose={() => setDeleteConfirmChat(null)}
+        onClose={() => { setDeleteConfirmChat(null); setDeleteRoomError(''); }}
         title={t('chat.deleteRoom')}
       >
         <div className="space-y-4">
+          {deleteRoomError && (
+            <p className="text-sm text-error">{deleteRoomError}</p>
+          )}
           <p className="text-neutral-700">
             {t('chat.deleteRoomConfirm', { 
               roomName: deleteConfirmChat?.type === 'internal_room' 

@@ -20,7 +20,8 @@ export async function createNotificationAndPush(
   titleAr: string,
   messageEn: string,
   messageAr: string,
-  type: NotificationType = 'info'
+  type: NotificationType = 'info',
+  referenceId?: string
 ): Promise<string | null> {
   console.log('[Notify] createNotificationAndPush called:', { userId, titleEn, titleAr, messageEn: messageEn.substring(0, 50), messageAr: messageAr.substring(0, 50), type });
   
@@ -29,8 +30,8 @@ export async function createNotificationAndPush(
   try {
     await connection.beginTransaction();
     await connection.query(
-      `INSERT INTO notifications (id, user_id, type, is_read) VALUES (?, ?, ?, FALSE)`,
-      [notificationId, userId, type]
+      `INSERT INTO notifications (id, user_id, type, is_read, reference_id) VALUES (?, ?, ?, FALSE, ?)`,
+      [notificationId, userId, type, referenceId ?? null]
     );
     await connection.commit();
     console.log('[Notify] Notification created in DB:', notificationId);

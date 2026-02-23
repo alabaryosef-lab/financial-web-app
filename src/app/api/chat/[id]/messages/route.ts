@@ -296,7 +296,8 @@ export async function POST(
         titleAr,
         msgPreview(contentEn),
         msgPreview(contentAr),
-        'info'
+        'info',
+        chatId
       );
     }
 

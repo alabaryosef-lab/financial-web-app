@@ -119,11 +119,38 @@ export async function POST(request: NextRequest) {
     if (!customerId) {
       return validationError('Customer is required', 'error.missingRequiredFields');
     }
-    if (!employeeId) {
-      return validationError('At least one employee is required', 'error.missingRequiredFields');
+
+    let resolvedEmployeeId = employeeId;
+    let resolvedEmployeeIdsArray = employeeIdsArray;
+    if (!resolvedEmployeeId) {
+      const [custRow] = await pool.query(
+        'SELECT assigned_employee_id FROM customers WHERE id = ?',
+        [customerId]
+      ) as any[];
+      const [assignRows] = await pool.query(
+        'SELECT employee_id FROM employee_customer_assignments WHERE customer_id = ? ORDER BY employee_id',
+        [customerId]
+      ) as any[];
+      const assignedIds = (assignRows || []).map((r: any) => r.employee_id);
+      const primaryFromCust = custRow?.[0]?.assigned_employee_id;
+      if (primaryFromCust && assignedIds.includes(primaryFromCust)) {
+        resolvedEmployeeId = primaryFromCust;
+        resolvedEmployeeIdsArray = assignedIds.length > 0 ? assignedIds : [primaryFromCust];
+      } else if (assignedIds.length > 0) {
+        resolvedEmployeeId = assignedIds[0];
+        resolvedEmployeeIdsArray = assignedIds;
+      }
+      if (!resolvedEmployeeId) {
+        return errorResponse(
+          'Customer must have at least one assigned employee to create a loan.',
+          400,
+          'error.customerMustHaveAssignedEmployee'
+        );
+      }
     }
-    if (employeeIdsArray) {
-      for (const eid of employeeIdsArray) {
+
+    if (resolvedEmployeeIdsArray) {
+      for (const eid of resolvedEmployeeIdsArray) {
         const [emp] = await pool.query('SELECT id FROM users WHERE id = ? AND role = ?', [eid, 'employee']) as any[];
         if (emp.length === 0) return notFoundError('Employee');
       }
@@ -169,10 +196,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!employeeIdsArray) {
+    if (!resolvedEmployeeIdsArray) {
       const [employees] = await pool.query(
         'SELECT id FROM users WHERE id = ? AND role = ?',
-        [employeeId, 'employee']
+        [resolvedEmployeeId, 'employee']
       ) as any[];
       if (employees.length === 0) return notFoundError('Employee');
     }
@@ -191,7 +218,7 @@ export async function POST(request: NextRequest) {
       console.log('[Loans API] Inserting loan:', {
         loanId,
         customerId,
-        employeeId,
+        employeeId: resolvedEmployeeId,
         amount: amountNum,
         interestRate: interestRateNum,
         numberOfInstallments: numberOfInstallmentsNum,
@@ -208,7 +235,7 @@ export async function POST(request: NextRequest) {
         [
           loanId,
           customerId,
-          employeeId,
+          resolvedEmployeeId,
           amountNum,
           interestRateNum,
           numberOfInstallmentsNum,
@@ -220,10 +247,10 @@ export async function POST(request: NextRequest) {
 
       await connection.query(
         'UPDATE customers SET assigned_employee_id = ? WHERE id = ?',
-        [employeeId, customerId]
+        [resolvedEmployeeId, customerId]
       );
 
-      const idsToAdd = employeeIdsArray ?? [employeeId];
+      const idsToAdd = resolvedEmployeeIdsArray ?? [resolvedEmployeeId];
       for (const eid of idsToAdd) {
         await connection.query(
           `INSERT IGNORE INTO employee_customer_assignments (employee_id, customer_id) VALUES (?, ?)`,
@@ -306,15 +333,17 @@ export async function POST(request: NextRequest) {
         'تم إنشاء قرض جديد',
         `A loan of ${amountStr} has been created for you.`,
         `تم إنشاء قرض بمبلغ ${amountStr} لك.`,
-        'info'
+        'info',
+        loanId
       );
       await createNotificationAndPush(
-        employeeId,
+        resolvedEmployeeId,
         'New Loan Created',
         'تم إنشاء قرض جديد',
         `A loan for ${custNameEn} has been created (${amountStr}).`,
         `تم إنشاء قرض للعميل ${custNameAr} (${amountStr}).`,
-        'info'
+        'info',
+        loanId
       );
     } catch (notifyErr) {
       console.warn('[Loans API] Notify/push failed:', notifyErr);

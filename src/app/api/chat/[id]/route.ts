@@ -31,12 +31,22 @@ export async function DELETE(
     }
 
     const [chats] = await pool.query(
-      'SELECT id FROM chats WHERE id = ?',
+      'SELECT id, type, loan_id FROM chats WHERE id = ?',
       [chatId]
     ) as any[];
 
     if (chats.length === 0) {
       return errorResponse('Chat not found', 404, 'error.chatNotFound');
+    }
+
+    const chat = chats[0];
+    const isUnifiedCustomerChat = chat.type === 'customer_employee' && (chat.loan_id == null || chat.loan_id === '');
+    if (isUnifiedCustomerChat) {
+      return errorResponse(
+        'Cannot delete this chat while the customer exists. Delete the customer first.',
+        400,
+        'chat.cannotDeleteUnifiedChatWhileCustomerExists'
+      );
     }
 
     // Permanently delete conversation (not archived): read status, messages, participants, then chat
