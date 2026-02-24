@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { saveLoanNotesTranslations } from '@/lib/translations';
 import { translateToBothLanguages } from '@/lib/translate';
 import { successResponse, errorResponse, notFoundError, serverError, unauthorizedError } from '@/lib/api';
+import { toDateOnlyString } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ export async function GET(
 
     const loan = rows[0];
     const notes = locale === 'ar' ? (loan.notes_ar || loan.notes_en || null) : (loan.notes_en || loan.notes_ar || null);
-    const startDateVal = loan.start_date ? String(loan.start_date).slice(0, 10) : loan.start_date;
+    const startDateVal = toDateOnlyString(loan.start_date) ?? loan.start_date;
 
     const [empRows] = await pool.query(
       'SELECT employee_id FROM employee_customer_assignments WHERE customer_id = ? ORDER BY employee_id',
@@ -228,7 +229,7 @@ export async function PUT(
 
     const loan = rows[0];
     const notesOut = loan.notes_en || loan.notes_ar || null;
-    const startDateOut = loan.start_date ? String(loan.start_date).slice(0, 10) : loan.start_date;
+    const startDateOut = toDateOnlyString(loan.start_date) ?? loan.start_date;
     const loanData = {
       id: loan.id,
       customerId: loan.customer_id,

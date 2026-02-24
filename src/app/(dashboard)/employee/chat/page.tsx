@@ -280,7 +280,9 @@ export default function EmployeeChatPage() {
                 >
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-neutral-900">
-                      {chat.participantNames && chat.participantNames.length > 0
+                      {chat.type === 'internal_room' && chat.roomName
+                        ? chat.roomName
+                        : chat.participantNames && chat.participantNames.length > 0
                         ? chat.participantNames.join(', ')
                         : t('chat.customerChat')}
                     </p>

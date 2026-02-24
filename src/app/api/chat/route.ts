@@ -46,8 +46,9 @@ export async function GET(request: NextRequest) {
       ) as any[];
       rows = chats || [];
     } else {
-      // Employee: only unified customer_employee chats (no internal rooms, no other chat types)
-      let customerChats: any[];
+      // Employee: customer_employee chats (assigned customers) + internal_room chats where they are a participant
+      let customerChats: any[] = [];
+      let internalChats: any[] = [];
       try {
         [customerChats] = await pool.query(
           `SELECT DISTINCT c.*
@@ -78,7 +79,26 @@ export async function GET(request: NextRequest) {
           throw e;
         }
       }
-      rows = customerChats || [];
+      const [internalRooms] = await pool.query(
+        `SELECT DISTINCT c.*
+         FROM chats c
+         INNER JOIN chat_participants cp ON c.id = cp.chat_id AND cp.user_id = ?
+         WHERE c.type = 'internal_room'
+         ORDER BY COALESCE(c.is_pinned, 0) DESC, c.updated_at DESC`,
+        [userId]
+      ) as any[];
+      internalChats = internalRooms || [];
+      // Merge and sort by pinned then updated_at
+      const byKey: Record<string, any> = {};
+      [...(customerChats || []), ...internalChats].forEach((r) => { byKey[r.id] = r; });
+      rows = Object.values(byKey).sort((a, b) => {
+        const pinA = a.is_pinned ? 1 : 0;
+        const pinB = b.is_pinned ? 1 : 0;
+        if (pinB !== pinA) return pinB - pinA;
+        const tA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const tB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return tB - tA;
+      });
     }
 
     // Get last message, unread count, and participant names for each chat
@@ -124,6 +144,23 @@ export async function GET(request: NextRequest) {
             LEFT JOIN user_translations ut_ar ON u.id = ut_ar.user_id AND ut_ar.locale = 'ar'
             WHERE cp.chat_id = ? AND cp.user_id != ?`,
             [chat.id, userId]
+          ) as any[];
+          participantNames = participants.map((p: any) => {
+            if (p.role === 'admin') return 'Admin';
+            return p.name_en || p.name_ar || p.user_id;
+          });
+          participantIds = participants.map((p: any) => p.user_id);
+        } else if (chat.type === 'internal_room') {
+          const [participants] = await pool.query(
+            `SELECT cp.user_id, u.role, u.email,
+              ut_en.name as name_en,
+              ut_ar.name as name_ar
+            FROM chat_participants cp
+            INNER JOIN users u ON cp.user_id = u.id
+            LEFT JOIN user_translations ut_en ON u.id = ut_en.user_id AND ut_en.locale = 'en'
+            LEFT JOIN user_translations ut_ar ON u.id = ut_ar.user_id AND ut_ar.locale = 'ar'
+            WHERE cp.chat_id = ?`,
+            [chat.id]
           ) as any[];
           participantNames = participants.map((p: any) => {
             if (p.role === 'admin') return 'Admin';

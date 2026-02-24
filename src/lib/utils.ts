@@ -56,11 +56,24 @@ export function formatDateOnly(date: string, locale: string = 'en'): string {
   }
 }
 
-/** For <input type="date"> value: always yyyy-MM-dd */
+/** Normalize a date (Date, string, or from DB) to YYYY-MM-DD. Returns null for invalid/missing. */
+export function toDateOnlyString(v: unknown): string | null {
+  if (v == null || v === '') return null;
+  if (typeof v === 'string' && v.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
+  const d = v instanceof Date ? v : new Date(v as string);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** For <input type="date"> value: always yyyy-MM-dd. Prefer passing-through ISO date strings to avoid timezone shifts. */
 export function toDateInputValue(date: string | undefined | null): string {
   if (date == null || date === '') return '';
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())) return date.trim().slice(0, 10);
   try {
-    const d = new Date(date);
+    const only = toDateOnlyString(date as unknown);
+    if (only) return only;
+    const d = date instanceof Date ? date : new Date(date);
     if (Number.isNaN(d.getTime())) return '';
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');

@@ -5,6 +5,7 @@ import { translateToBothLanguages } from '@/lib/translate';
 import { successResponse, errorResponse, validationError, notFoundError, serverError } from '@/lib/api';
 import { createNotificationAndPush } from '@/lib/notify';
 import { syncCustomerUnifiedChat } from '@/lib/customer-chat';
+import { toDateOnlyString } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +60,6 @@ export async function GET(request: NextRequest) {
 
     const [rows] = await pool.query(query, params) as any[];
 
-    const toDateOnly = (v: any) => (v == null || v === '') ? null : (typeof v === 'string' && v.length >= 10 ? v.slice(0, 10) : String(v));
     const loans = rows.map((row: any) => {
       const notes = locale === 'ar' ? (row.notes_ar || row.notes_en || null) : (row.notes_en || row.notes_ar || null);
       return {
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         interestRate: parseFloat(row.interest_rate),
         numberOfInstallments: row.number_of_installments,
         installmentTotal: parseFloat(row.installment_total),
-        startDate: toDateOnly(row.start_date),
+        startDate: toDateOnlyString(row.start_date) ?? null,
         status: row.status,
         notes,
         createdAt: row.created_at,
