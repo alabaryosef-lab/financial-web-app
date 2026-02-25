@@ -1,7 +1,6 @@
 import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import * as fs from 'fs';
 
 // Load environment variables
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
