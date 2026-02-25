@@ -260,7 +260,7 @@ export default function EmployeeChatPage() {
               </div>
             )}
           </div>
-          <div className="divide-y divide-neutral-100 overflow-y-auto flex-1">
+          <div className="divide-y divide-neutral-100 overflow-y-auto overflow-x-hidden flex-1 min-w-0">
             {filteredChats.length === 0 ? (
               <div className="p-4 text-center text-neutral-500">
                 <p>{chats.length === 0 ? t('chat.noChats') : t('chat.noMatches')}</p>
@@ -274,12 +274,12 @@ export default function EmployeeChatPage() {
                     setSelectedChat(chat.id);
                     (e.currentTarget as HTMLElement).blur();
                   }}
-                  className={`w-full p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors border-b border-neutral-100 touch-manipulation ${
+                  className={`w-full min-w-0 overflow-hidden p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors border-b border-neutral-100 touch-manipulation ${
                     selectedChat === chat.id ? 'bg-primary-50' : ''
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-neutral-900">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="font-semibold text-neutral-900 truncate min-w-0">
                       {chat.type === 'internal_room' && chat.roomName
                         ? chat.roomName
                         : chat.participantNames && chat.participantNames.length > 0
@@ -287,13 +287,13 @@ export default function EmployeeChatPage() {
                         : t('chat.customerChat')}
                     </p>
                     {chat.unreadCount > 0 && (
-                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold">
+                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold shrink-0">
                         {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                       </span>
                     )}
                   </div>
                   {chat.lastMessage && (
-                    <p className={`text-sm mt-1 truncate ${
+                    <p className={`text-sm mt-1 line-clamp-1 break-words ${
                       chat.unreadCount > 0
                         ? 'text-neutral-900 font-medium'
                         : 'text-neutral-600'

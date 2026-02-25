@@ -1,92 +1,42 @@
-#!/bin/bash
-# Deployment script: stash, pull, install, migrate, build, seed admin, restart with PM2
-# Usage: bash scripts/deploy.sh [branch]
-#   branch: git branch to pull (default: backend)
-
+#!/usr/bin/env bash
+# Server deploy: fetch, pull, install, migrate, build, pm2 restart.
+# On server once: chmod +x scripts/deploy.sh
+# Usage: ./scripts/deploy.sh [--seed-admin]
+# Env: APP_DIR (default /var/www/financial-web-app), DEPLOY_BRANCH (default backend-no-firebase)
 set -e
 
-BRANCH="${1:-backend}"
-APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+APP_DIR="${APP_DIR:-/var/www/financial-web-app}"
+BRANCH="${DEPLOY_BRANCH:-backend-no-firebase}"
+SEED_ADMIN=false
+
+for arg in "$@"; do
+  [ "$arg" = "--seed-admin" ] && SEED_ADMIN=true
+done
+
 cd "$APP_DIR"
+echo "[deploy] Using $APP_DIR, branch $BRANCH"
 
-echo "=== Deployment Script ==="
-echo "App directory: $APP_DIR"
-echo "Branch: $BRANCH"
-echo ""
-
-# Check if .env.local exists
-if [ ! -f "$APP_DIR/.env.local" ]; then
-  echo "ERROR: .env.local not found. Please create it first."
-  exit 1
-fi
-
-# Stash any local changes
-echo "=== Stashing local changes ==="
-git stash push -m "Auto-stash before deploy $(date +%Y-%m-%d\ %H:%M:%S)" || echo "No changes to stash"
-
-# Pull latest code
-echo "=== Pulling latest code from $BRANCH ==="
-git fetch origin
+echo "[deploy] Fetching and checking out..."
+git fetch origin "$BRANCH"
 git checkout "$BRANCH"
 git pull origin "$BRANCH"
 
-# Install dependencies
-echo "=== Installing dependencies ==="
+echo "[deploy] Installing dependencies..."
 npm install --no-audit --no-fund
 
-# Run database migrations
-echo "=== Running database migrations ==="
-npm run migrate || {
-  echo "WARNING: Migration failed. Continuing anyway..."
-}
+echo "[deploy] Running migrations..."
+npm run db:migrate
 
-# Build the application
-echo "=== Building application ==="
+if [ "$SEED_ADMIN" = true ]; then
+  echo "[deploy] Seeding admin..."
+  npm run seed-admin
+fi
+
+echo "[deploy] Building..."
 npm run build
 
-# Check/seed admin user
-echo "=== Checking/Seeding admin user ==="
-npm run seed-admin || {
-  echo "WARNING: Admin seed failed. Continuing anyway..."
-}
-
-# Check if PM2 is installed
-if ! command -v pm2 &> /dev/null; then
-  echo "=== Installing PM2 ==="
-  npm install -g pm2
-fi
-
-# Check if app is already running
-PM2_APP_NAME="financial-web-app"
-if pm2 list | grep -q "$PM2_APP_NAME"; then
-  echo "=== Restarting PM2 app ==="
-  pm2 restart "$PM2_APP_NAME"
-else
-  echo "=== Starting PM2 app ==="
-  pm2 start ecosystem.config.js
-fi
-
-# Save PM2 process list
-echo "=== Saving PM2 process list ==="
+echo "[deploy] Restarting PM2..."
+pm2 restart financial-web-app
 pm2 save
 
-# Setup PM2 startup (if not already configured)
-echo "=== Setting up PM2 startup ==="
-if ! pm2 startup | grep -q "already setup"; then
-  STARTUP_CMD=$(pm2 startup systemd -u "$USER" --hp "$HOME" | grep -v "PM2" | tail -1)
-  if [ -n "$STARTUP_CMD" ]; then
-    echo "Run this command to enable PM2 startup:"
-    echo "$STARTUP_CMD"
-  fi
-else
-  echo "PM2 startup already configured"
-fi
-
-echo ""
-echo "=== Deployment complete ==="
-echo "App status:"
-pm2 status "$PM2_APP_NAME"
-echo ""
-echo "View logs: pm2 logs $PM2_APP_NAME"
-echo "Restart: pm2 restart $PM2_APP_NAME"
-echo "Stop: pm2 stop $PM2_APP_NAME"
+echo "[deploy] Done."

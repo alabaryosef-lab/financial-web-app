@@ -242,7 +242,7 @@ export default function CustomerChatPage() {
           <div className="p-3 sm:p-4 border-b border-neutral-100 shrink-0">
             <h2 className="font-semibold text-neutral-900 text-base sm:text-lg">{t('chat.chats')}</h2>
           </div>
-          <div className="divide-y divide-neutral-100 overflow-y-auto flex-1">
+          <div className="divide-y divide-neutral-100 overflow-y-auto overflow-x-hidden flex-1 min-w-0">
             {chats.map((chat) => (
               <button
                 key={chat.id}
@@ -251,22 +251,22 @@ export default function CustomerChatPage() {
                   setSelectedChat(chat.id);
                   (e.currentTarget as HTMLElement).blur();
                 }}
-                className={`w-full p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors border-b border-neutral-100 touch-manipulation ${
+                className={`w-full min-w-0 overflow-hidden p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors border-b border-neutral-100 touch-manipulation ${
                   selectedChat === chat.id ? 'bg-primary-50' : ''
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-neutral-900">
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="font-semibold text-neutral-900 truncate min-w-0">
                     {t('chat.companyName')}
                   </p>
                   {chat.unreadCount > 0 && (
-                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold">
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold shrink-0">
                       {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                     </span>
                   )}
                 </div>
                 {chat.lastMessage && (
-                  <p className={`text-sm mt-1 truncate ${
+                  <p className={`text-sm mt-1 line-clamp-1 break-words ${
                     chat.unreadCount > 0
                       ? 'text-neutral-900 font-medium'
                       : 'text-neutral-600'

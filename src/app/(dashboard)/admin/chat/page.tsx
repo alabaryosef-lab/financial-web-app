@@ -349,7 +349,7 @@ export default function AdminChatPage() {
               className="text-sm"
             />
           </div>
-          <div className="divide-y divide-neutral-100 overflow-y-auto flex-1">
+          <div className="divide-y divide-neutral-100 overflow-y-auto overflow-x-hidden flex-1 min-w-0">
             {filteredChats.length === 0 ? (
               <div className="p-4 text-center text-neutral-500">
                 <p>{searchQuery ? t('common.noResults') : t('chat.noChats')}</p>
@@ -374,13 +374,13 @@ export default function AdminChatPage() {
                             setSelectedChat(chat.id);
                             (e.currentTarget as HTMLElement).blur();
                           }}
-                          className="flex-1 p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors touch-manipulation"
+                          className="flex-1 min-w-0 overflow-hidden p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors touch-manipulation"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <Pin className="w-4 h-4 text-primary-600 shrink-0" fill="currentColor" strokeWidth={2} aria-label={t('chat.pinned')} />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-neutral-900">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <p className="font-semibold text-neutral-900 truncate">
                                   {chat.type === 'internal_room'
                                     ? translateRoomName(chat.roomName)
                                     : chat.participantNames && chat.participantNames.length > 0
@@ -388,13 +388,13 @@ export default function AdminChatPage() {
                                     : t('chat.customerChat')}
                                 </p>
                                 {chat.unreadCount > 0 && (
-                                  <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold">
+                                  <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold shrink-0">
                                     {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                                   </span>
                                 )}
                               </div>
                               {chat.lastMessage && (
-                                <p className={`text-sm mt-1 truncate ${
+                                <p className={`text-sm mt-1 line-clamp-1 break-words ${
                                   chat.lastMessage.isDeleted 
                                     ? 'text-neutral-400 italic' 
                                     : chat.unreadCount > 0
@@ -407,7 +407,7 @@ export default function AdminChatPage() {
                             </div>
                           </div>
                         </button>
-                        <div className="flex items-center gap-1 px-2">
+                        <div className="flex items-center gap-1 px-2 shrink-0">
                           <button
                             type="button"
                             onClick={(e) => handlePinToggle(chat.id, e)}
@@ -455,10 +455,10 @@ export default function AdminChatPage() {
                             setSelectedChat(chat.id);
                             (e.currentTarget as HTMLElement).blur();
                           }}
-                          className="flex-1 p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors touch-manipulation"
+                          className="flex-1 min-w-0 overflow-hidden p-3 sm:p-4 min-h-[52px] text-left rtl:text-right hover:bg-neutral-50 transition-colors touch-manipulation"
                         >
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-neutral-900">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <p className="font-semibold text-neutral-900 truncate min-w-0">
                               {chat.type === 'internal_room'
                                 ? translateRoomName(chat.roomName)
                                 : chat.participantNames && chat.participantNames.length > 0
@@ -466,13 +466,13 @@ export default function AdminChatPage() {
                                 : t('chat.customerChat')}
                             </p>
                             {chat.unreadCount > 0 && (
-                              <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold">
+                              <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-xs font-semibold shrink-0">
                                 {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                               </span>
                             )}
                           </div>
                           {chat.lastMessage && chat.lastMessage.content && (
-                            <p className={`text-sm mt-1 truncate ${
+                            <p className={`text-sm mt-1 line-clamp-1 break-words ${
                               chat.unreadCount > 0
                                 ? 'text-neutral-900 font-medium'
                                 : 'text-neutral-600'
@@ -481,7 +481,7 @@ export default function AdminChatPage() {
                             </p>
                           )}
                         </button>
-                        <div className="flex items-center gap-1 px-2">
+                        <div className="flex items-center gap-1 px-2 shrink-0">
                           <button
                             type="button"
                             onClick={(e) => handlePinToggle(chat.id, e)}
