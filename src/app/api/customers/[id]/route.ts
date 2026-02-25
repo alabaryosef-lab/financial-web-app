@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import pool from '@/lib/db';
-import { saveUserNameTranslations } from '@/lib/translations';
 import { hashPassword } from '@/lib/auth';
 import { successResponse, errorResponse, notFoundError, serverError } from '@/lib/api';
 
@@ -130,9 +129,18 @@ export async function PUT(
         );
       }
 
-      // Update translations if name provided
+      // Update translations if name provided (same connection to avoid lock wait)
       if (name) {
-        await saveUserNameTranslations(params.id, name, name);
+        await connection.query(
+          `INSERT INTO user_translations (user_id, locale, name) VALUES (?, 'en', ?)
+           ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+          [params.id, name]
+        );
+        await connection.query(
+          `INSERT INTO user_translations (user_id, locale, name) VALUES (?, 'ar', ?)
+           ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+          [params.id, name]
+        );
       }
 
       // Update customer
