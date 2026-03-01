@@ -11,7 +11,6 @@ const poolConfig = {
   waitForConnections: true,
   connectionLimit: 500,
   queueLimit: 500,
-  max_connections: 1000
 };
 
 const globalForDb = globalThis as unknown as { dbPool: mysql.Pool };
