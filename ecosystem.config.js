@@ -5,8 +5,8 @@ module.exports = {
   apps: [
     {
       name: 'financial-web-app',
-      script: path.join(appDir, 'scripts/start-server.sh'),
-      interpreter: 'bash',
+      script: 'node_modules/next/dist/bin/next',
+      args: 'start -p 3000',
       cwd: appDir,
       instances: 1,
       exec_mode: 'fork',
