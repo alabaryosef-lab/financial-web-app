@@ -306,10 +306,25 @@ export default function AdminChatPage() {
         }),
       });
 
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        chatId: selectedChat,
+        senderId: user.id,
+        senderName: user.name || user.email || '',
+        senderRole: user.role as any,
+        content: content.trim() || '',
+        fileUrl,
+        fileName,
+        fileType,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
+
       const data = await response.json();
       if (data.success) {
-        await fetchMessages(selectedChat);
+        fetchMessages(selectedChat);
       } else {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
         console.error('Failed to send message:', data.error);
       }
     } catch (error) {
