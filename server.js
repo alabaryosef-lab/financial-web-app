@@ -11,13 +11,20 @@ const app = next({ dev, hostname, port });
 app.prepare().then(() => {
   const handle = app.getRequestHandler();
   const server = http.createServer(async (req, res) => {
+    if (!req.url || !res.setHeader) {
+      res.statusCode = 400;
+      res.end('Bad Request');
+      return;
+    }
     try {
-      const parsedUrl = parse(req.url || '', true);
+      const parsedUrl = parse(req.url, true);
       await handle(req, res, parsedUrl);
     } catch (err) {
-      console.error('Error handling request:', err);
-      res.statusCode = 500;
-      res.end('Internal Server Error');
+      console.error('Error handling request:', req.url, err);
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+      }
     }
   });
 
