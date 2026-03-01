@@ -36,6 +36,7 @@ export async function DELETE(
     ) as any[];
 
     if (chats.length === 0) {
+      console.warn('Delete chat: not found in DB, chatId=', chatId);
       return errorResponse('Chat not found', 404, 'error.chatNotFound');
     }
 
@@ -49,8 +50,14 @@ export async function DELETE(
       );
     }
 
-    // Permanently delete conversation (not archived): read status, messages, participants, then chat
+    // Permanently delete: translations, read status, messages, participants, then chat
     await pool.query('DELETE FROM chat_read_status WHERE chat_id = ?', [chatId]);
+    await pool.query(
+      `DELETE cmt FROM chat_message_translations cmt
+       INNER JOIN chat_messages cm ON cmt.message_id = cm.id
+       WHERE cm.chat_id = ?`,
+      [chatId]
+    );
     await pool.query('DELETE FROM chat_messages WHERE chat_id = ?', [chatId]);
     await pool.query('DELETE FROM chat_participants WHERE chat_id = ?', [chatId]);
     await pool.query('DELETE FROM chats WHERE id = ?', [chatId]);
