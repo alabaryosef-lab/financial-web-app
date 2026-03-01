@@ -5,8 +5,7 @@
 
 import pool from './db';
 import { saveNotificationTranslations } from './translations';
-// Firebase FCM push notifications disabled
-// import { sendPushNotification } from './fcm';
+import { wsSendToUser } from './ws-broadcast';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -55,7 +54,7 @@ export async function createNotificationAndPush(
     console.error('[Notify] Save notification translations error:', err);
   }
 
-  // Firebase FCM push notifications disabled - using in-app notifications only
-  // Notifications are polled every 15s by NotificationContext
+  wsSendToUser(userId, { type: 'notification:new', data: { notificationId } });
+
   return notificationId;
 }

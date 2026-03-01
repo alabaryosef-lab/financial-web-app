@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import type { Notification as AppNotification } from '@/types';
 import { reloadIfStaleDeploy } from '@/lib/client-utils';
+import { useWebSocket } from './WebSocketContext';
 
 interface NotificationContextType {
   notifications: AppNotification[];
@@ -187,12 +188,15 @@ export function NotificationProvider({ children, userId, locale }: { children: R
     return () => window.removeEventListener('focus', onFocus);
   }, [userId, fetchNotifications]);
 
-  // Realtime: poll every 10s (reduced from 5s to lower load; beep still plays on new unread)
+  // Real-time via WebSocket
+  const { subscribe } = useWebSocket();
   useEffect(() => {
     if (!userId) return;
-    const interval = setInterval(() => fetchNotifications(), 10000);
-    return () => clearInterval(interval);
-  }, [userId, fetchNotifications]);
+    const unsub = subscribe('notification:new', () => {
+      fetchNotifications();
+    });
+    return unsub;
+  }, [userId, subscribe, fetchNotifications]);
 
   const addNotification = async (notification: Omit<AppNotification, 'id' | 'createdAt'>) => {
     try {

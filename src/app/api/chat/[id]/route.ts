@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { successResponse, errorResponse, serverError, unauthorizedError } from '@/lib/api';
+import { wsSendToUsers } from '@/lib/ws-broadcast';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,10 @@ export async function DELETE(
       );
     }
 
+    // Capture participants before deletion for WebSocket notification
+    const [chatParticipants] = await pool.query('SELECT user_id FROM chat_participants WHERE chat_id = ?', [chatId]) as any[];
+    const participantIds = chatParticipants.map((p: any) => p.user_id);
+
     console.log('[DELETE CHAT] Deleting read status...');
     const [r1] = await pool.query('DELETE FROM chat_read_status WHERE chat_id = ?', [chatId]) as any[];
     console.log('[DELETE CHAT] Read status deleted:', r1.affectedRows, 'rows');
@@ -82,6 +87,9 @@ export async function DELETE(
     console.log('[DELETE CHAT] Chat deleted:', r5.affectedRows, 'rows');
 
     console.log('[DELETE CHAT] SUCCESS chatId=', chatId);
+
+    wsSendToUsers(participantIds, { type: 'chat:list-update', data: { action: 'delete', chatId } });
+
     return successResponse(
       { deleted: true },
       'Room deleted successfully',

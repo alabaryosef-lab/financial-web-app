@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import pool from '@/lib/db';
 import { successResponse, validationError, errorResponse, serverError } from '@/lib/api';
+import { wsSendToUsers } from '@/lib/ws-broadcast';
 
 /**
  * POST /api/chat/create-room
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     ) as any[];
     const c = created[0];
 
-    return successResponse({
+    const chatData = {
       id: c.id,
       type: c.type,
       roomName: c.room_name,
@@ -60,7 +61,11 @@ export async function POST(request: NextRequest) {
       unreadCount: 0,
       createdAt: c.created_at,
       updatedAt: c.updated_at,
-    });
+    };
+
+    wsSendToUsers(participants, { type: 'chat:list-update', data: { action: 'create', chatId } });
+
+    return successResponse(chatData);
   } catch (error: any) {
     console.error('Create room error:', error);
     return serverError();

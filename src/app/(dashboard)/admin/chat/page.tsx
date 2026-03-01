@@ -15,12 +15,14 @@ import { Chat, ChatMessage } from '../../../../types';
 import type { Employee } from '../../../../types';
 import { Pin, PinOff, Trash2, Bookmark } from 'lucide-react';
 import { reloadIfStaleDeploy } from '@/lib/client-utils';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 
 export default function AdminChatPage() {
   const pathname = usePathname();
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const { refreshNotifications } = useNotifications();
+  const { subscribe } = useWebSocket();
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -144,19 +146,22 @@ export default function AdminChatPage() {
     }
   }, [selectedChat, locale]);
 
-  // Real-time: poll messages while a chat is open (keeps polling when tab minimized)
+  // Real-time via WebSocket
   useEffect(() => {
-    if (!selectedChat) return;
-    const interval = setInterval(() => fetchMessages(selectedChat), 60000);
-    return () => clearInterval(interval);
-  }, [selectedChat, locale]);
+    const unsub = subscribe('chat:message', (data: any) => {
+      if (data?.chatId && data.chatId === selectedChat) {
+        fetchMessages(data.chatId);
+      }
+    });
+    return unsub;
+  }, [subscribe, selectedChat]);
 
-  // Real-time: poll chat list for pinning updates (keeps polling when tab minimized)
   useEffect(() => {
-    if (!user?.id) return;
-    const interval = setInterval(() => fetchChats(), 60000);
-    return () => clearInterval(interval);
-  }, [user?.id]);
+    const unsub = subscribe('chat:list-update', () => {
+      fetchChats();
+    });
+    return unsub;
+  }, [subscribe]);
 
   const selectedChatData = chats.find(c => c.id === selectedChat);
   
